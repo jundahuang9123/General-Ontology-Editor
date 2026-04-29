@@ -1,0 +1,106 @@
+id: https://example.org/linkml/general-ontology
+name: general_ontology
+title: General Purpose Ontology
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  ex: https://example.org/ontology/
+  owl: http://www.w3.org/2002/07/owl#
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  skos: http://www.w3.org/2004/02/skos/core#
+  xsd: http://www.w3.org/2001/XMLSchema#
+
+default_prefix: ex
+default_range: string
+
+imports:
+  - linkml:types
+
+types:
+  anyURI:
+    uri: xsd:anyURI
+    base: str
+
+classes:
+  Entity:
+    class_uri: owl:Thing
+    slots:
+      - label
+      - definition
+      - same_as
+
+  Concept:
+    is_a: Entity
+    class_uri: skos:Concept
+    slots:
+      - broader
+      - related
+      - status
+
+  Person:
+    is_a: Entity
+    class_uri: ex:Person
+    slots:
+      - member_of
+
+  Organization:
+    is_a: Entity
+    class_uri: ex:Organization
+    slots:
+      - homepage
+
+  Place:
+    is_a: Entity
+    class_uri: ex:Place
+    slots:
+      - located_in
+
+slots:
+  label:
+    slot_uri: rdfs:label
+    range: string
+    required: true
+
+  definition:
+    slot_uri: skos:definition
+    range: string
+
+  same_as:
+    slot_uri: owl:sameAs
+    range: anyURI
+    multivalued: true
+
+  broader:
+    slot_uri: skos:broader
+    range: Concept
+    multivalued: true
+
+  related:
+    slot_uri: skos:related
+    range: Concept
+    multivalued: true
+
+  status:
+    slot_uri: ex:status
+    range: ConceptStatusEnum
+
+  member_of:
+    slot_uri: ex:memberOf
+    range: Organization
+    multivalued: true
+
+  homepage:
+    slot_uri: ex:homepage
+    range: anyURI
+
+  located_in:
+    slot_uri: ex:locatedIn
+    range: Place
+
+enums:
+  ConceptStatusEnum:
+    permissible_values:
+      proposed: null
+      active: null
+      deprecated: null

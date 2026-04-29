@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./schemas:/app/schemas
+      - ./generated:/app/generated
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: sh -c "[ -f /app/generated/jsonschema/ontology.schema.json ] || /app/scripts/generate.sh; uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  generator:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    volumes:
+      - ./schemas:/app/schemas
+      - ./generated:/app/generated
+    command: /app/scripts/generate.sh
