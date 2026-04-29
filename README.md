@@ -135,6 +135,16 @@ Use this only if you want to work on the React UI outside the Docker production 
 
 Vite proxies API requests to the FastAPI backend on port 8010.
 
+## iPadOS Wrapper
+
+An optional SwiftUI wrapper app is available in:
+
+```text
+ipad-wrapper/GeneralOntologyEditor.xcodeproj
+```
+
+Open it with Xcode on a Mac, choose a signing team, and run it on an iPad or iPad simulator. On a physical iPad, set the app's server URL to the LAN address of the machine hosting this Docker app, such as `http://192.168.1.25:8010/`.
+
 ## Stop The App
 
 1. Stop the running containers.
@@ -152,6 +162,7 @@ General-Ontology-Editor/
   schemas/          LinkML source ontology schema
   scripts/          Artifact generation scripts
   generated/        Generated JSON Schema and SHACL files
+  ipad-wrapper/     SwiftUI WKWebView iPadOS wrapper
   docker-compose.yml
 ```
 
