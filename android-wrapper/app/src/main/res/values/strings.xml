@@ -8,4 +8,7 @@
     <string name="server_url_help">Leave blank to use the bundled editor. Enter a server URL only when you want backend RDF, OWL, and SHACL import support.</string>
     <string name="apply">Apply</string>
     <string name="file_picker_unavailable">No file picker is available on this device.</string>
+    <string name="export_picker_unavailable">No save location picker is available on this device.</string>
+    <string name="export_saved">Export saved.</string>
+    <string name="export_failed">Export failed: %1$s</string>
 </resources>

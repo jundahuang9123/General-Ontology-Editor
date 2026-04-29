@@ -11,6 +11,7 @@
 		7A1F4B2A2B6C4D8E90100002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1F4B2A2B6C4D8E90100012 /* ContentView.swift */; };
 		7A1F4B2A2B6C4D8E90100003 /* EditorWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1F4B2A2B6C4D8E90100013 /* EditorWebView.swift */; };
 		7A1F4B2A2B6C4D8E90100004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7A1F4B2A2B6C4D8E90100015 /* Assets.xcassets */; };
+		7A1F4B2A2B6C4D8E90100005 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A1F4B2A2B6C4D8E90100017 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		7A1F4B2A2B6C4D8E90100014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7A1F4B2A2B6C4D8E90100015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7A1F4B2A2B6C4D8E90100016 /* GeneralOntologyEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeneralOntologyEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A1F4B2A2B6C4D8E90100017 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +51,7 @@
 				7A1F4B2A2B6C4D8E90100013 /* EditorWebView.swift */,
 				7A1F4B2A2B6C4D8E90100014 /* Info.plist */,
 				7A1F4B2A2B6C4D8E90100015 /* Assets.xcassets */,
+				7A1F4B2A2B6C4D8E90100017 /* PrivacyInfo.xcprivacy */,
 			);
 			path = GeneralOntologyEditor;
 			sourceTree = "<group>";
@@ -121,6 +124,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A1F4B2A2B6C4D8E90100004 /* Assets.xcassets in Resources */,
+				7A1F4B2A2B6C4D8E90100005 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,6 +145,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/WebApp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -198,7 +203,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -259,7 +264,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

@@ -6,7 +6,7 @@ The wrapper bundles the built React editor into the APK and opens it in a WebVie
 
 ## Bundled Mode
 
-When you build the Android project, Gradle runs the frontend build and copies `frontend/dist` into the APK assets. In bundled mode the editor can open, edit, save to device storage, download YAML, and export RDF/SHACL Turtle without a PC server.
+When you build the Android project, Gradle runs the frontend build and copies `frontend/dist` into the APK assets. In bundled mode the editor can open, edit, import LinkML YAML/JSON through the system file picker, save to device storage, and export YAML/RDF/SHACL Turtle to local or cloud storage without a PC server.
 
 RDF, OWL, and SHACL upload parsing still requires the backend server. LinkML YAML/JSON upload works inside the bundled app.
 

@@ -6,7 +6,7 @@ The wrapper bundles the built React editor into the app and opens it in a `WKWeb
 
 ## Bundled Mode
 
-The Xcode project includes a build phase that runs the frontend build and copies `frontend/dist` into the app as `WebApp`. In bundled mode the editor can open, edit, save to device storage, download YAML, and export RDF/SHACL Turtle without a PC server.
+The Xcode project includes a build phase that runs the frontend build and copies `frontend/dist` into the app as `WebApp`. In bundled mode the editor can open, edit, import LinkML YAML/JSON through the Files picker, save to device storage, and export YAML/RDF/SHACL Turtle to local or cloud storage without a PC server.
 
 RDF, OWL, and SHACL upload parsing still requires the backend server. LinkML YAML/JSON upload works inside the bundled app.
 

@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -26,6 +27,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -34,10 +37,14 @@ public class MainActivity extends Activity {
     private static final String LOCAL_EDITOR_HOST = "general-ontology-editor.local";
     private static final String LOCAL_EDITOR_URL = "https://" + LOCAL_EDITOR_HOST + "/index.html";
     private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final int EXPORT_FILE_REQUEST = 1002;
 
     private WebView webView;
     private SharedPreferences preferences;
     private ValueCallback<Uri[]> filePathCallback;
+    private String pendingExportFileName;
+    private String pendingExportMimeType;
+    private String pendingExportText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,6 +121,7 @@ public class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(false);
         settings.setUseWideViewPort(false);
 
+        view.addJavascriptInterface(new GeneralOntologyEditorBridge(), "GeneralOntologyEditor");
         view.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
@@ -230,6 +238,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == EXPORT_FILE_REQUEST) {
+            handleExportResult(resultCode, data);
+            return;
+        }
+
         if (requestCode != FILE_CHOOSER_REQUEST || filePathCallback == null) {
             return;
         }
@@ -251,5 +264,73 @@ public class MainActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void startExport(String fileName, String mimeType, String text) {
+        pendingExportFileName = sanitizeFileName(fileName);
+        pendingExportMimeType = sanitizeMimeType(mimeType);
+        pendingExportText = text == null ? "" : text;
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(pendingExportMimeType);
+        intent.putExtra(Intent.EXTRA_TITLE, pendingExportFileName);
+
+        try {
+            startActivityForResult(intent, EXPORT_FILE_REQUEST);
+        } catch (ActivityNotFoundException exception) {
+            clearPendingExport();
+            Toast.makeText(this, R.string.export_picker_unavailable, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleExportResult(int resultCode, Intent data) {
+        Uri uri = data == null ? null : data.getData();
+        if (resultCode != RESULT_OK || uri == null || pendingExportText == null) {
+            clearPendingExport();
+            return;
+        }
+
+        try (OutputStream stream = getContentResolver().openOutputStream(uri)) {
+            if (stream == null) {
+                throw new IOException("No output stream");
+            }
+            stream.write(pendingExportText.getBytes(StandardCharsets.UTF_8));
+            Toast.makeText(this, R.string.export_saved, Toast.LENGTH_SHORT).show();
+        } catch (IOException exception) {
+            Toast.makeText(this, getString(R.string.export_failed, exception.getLocalizedMessage()), Toast.LENGTH_LONG).show();
+        } finally {
+            clearPendingExport();
+        }
+    }
+
+    private void clearPendingExport() {
+        pendingExportFileName = null;
+        pendingExportMimeType = null;
+        pendingExportText = null;
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null) {
+            return "ontology-export.ttl";
+        }
+
+        String cleaned = fileName.replaceAll("[\\\\/:]", "-").trim();
+        return cleaned.isEmpty() ? "ontology-export.ttl" : cleaned;
+    }
+
+    private String sanitizeMimeType(String mimeType) {
+        if (mimeType == null || mimeType.trim().isEmpty() || !mimeType.contains("/")) {
+            return "text/plain";
+        }
+
+        return mimeType.trim();
+    }
+
+    private final class GeneralOntologyEditorBridge {
+        @JavascriptInterface
+        public void exportText(String fileName, String mimeType, String text) {
+            runOnUiThread(() -> startExport(fileName, mimeType, text));
+        }
     }
 }

@@ -5,6 +5,28 @@ import type { ExportKind } from '../components/Toolbar';
 
 const STORAGE_KEY = 'generalOntologyEditor.schema';
 
+type NativeExportPayload = {
+  action: 'exportText';
+  filename: string;
+  type: string;
+  text: string;
+};
+
+declare global {
+  interface Window {
+    GeneralOntologyEditor?: {
+      exportText?: (filename: string, type: string, text: string) => void;
+    };
+    webkit?: {
+      messageHandlers?: {
+        generalOntologyEditor?: {
+          postMessage: (payload: NativeExportPayload) => void;
+        };
+      };
+    };
+  }
+}
+
 type LoadResult = {
   schema: SchemaModel;
   message: string;
@@ -15,6 +37,10 @@ type SaveResult = {
 };
 
 export function downloadText(text: string, filename: string, type: string) {
+  if (exportWithNativePicker(text, filename, type)) {
+    return;
+  }
+
   const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -22,6 +48,26 @@ export function downloadText(text: string, filename: string, type: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function exportWithNativePicker(text: string, filename: string, type: string) {
+  try {
+    const androidExporter = window.GeneralOntologyEditor?.exportText;
+    if (androidExporter) {
+      androidExporter(filename, type, text);
+      return true;
+    }
+
+    const iosHandler = window.webkit?.messageHandlers?.generalOntologyEditor;
+    if (iosHandler) {
+      iosHandler.postMessage({ action: 'exportText', filename, type, text });
+      return true;
+    }
+  } catch (error) {
+    console.warn('Native export is unavailable; falling back to browser download.', error);
+  }
+
+  return false;
 }
 
 export async function loadSchemaModel(): Promise<LoadResult> {
