@@ -21,6 +21,12 @@ body {
   color: var(--text);
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 button,
 input,
 select,
@@ -496,5 +502,149 @@ button.danger {
 
   .canvas {
     border-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  button {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .toolbar {
+    gap: 10px;
+    min-height: auto;
+    padding: 10px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .toolbar h1 {
+    font-size: 16px;
+  }
+
+  .toolbar p {
+    display: none;
+  }
+
+  .toolbar__actions {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin: 0 -12px;
+    overflow-x: auto;
+    padding: 0 12px 2px;
+    scrollbar-width: thin;
+  }
+
+  .toolbar__actions button {
+    flex: 0 0 auto;
+  }
+
+  .status {
+    max-width: none;
+    width: 100%;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(55dvh, 55dvh) auto minmax(260px, 32dvh);
+    height: auto;
+    min-height: calc(100dvh - 128px);
+  }
+
+  .workspace--yaml-hidden {
+    grid-template-rows: minmax(62dvh, 62dvh) auto;
+  }
+
+  .canvas {
+    border-bottom: 1px solid var(--border);
+    height: 55dvh;
+    min-height: 360px;
+  }
+
+  .workspace--yaml-hidden .canvas {
+    height: 62dvh;
+  }
+
+  .inspector {
+    max-height: 42dvh;
+    padding: 12px;
+  }
+
+  .yaml-panel {
+    min-height: 260px;
+  }
+
+  .yaml-panel__header {
+    height: 34px;
+  }
+
+  .react-flow__minimap {
+    display: none;
+  }
+
+  .react-flow__controls {
+    transform: scale(0.88);
+    transform-origin: bottom left;
+  }
+
+  .import-modal {
+    padding: 16px;
+  }
+
+  .import-modal__actions button {
+    flex: 1 1 120px;
+    justify-content: center;
+  }
+
+  .class-node {
+    max-width: 78vw;
+    min-width: 200px;
+  }
+
+  .class-node.editing {
+    max-width: 92vw;
+    min-width: min(92vw, 360px);
+  }
+
+  .class-node--minimized {
+    max-width: 152px;
+    min-height: 52px;
+    min-width: 92px;
+    padding: 0 14px;
+  }
+
+  .class-node__bubble-label {
+    max-width: 120px;
+  }
+
+  .class-node__title {
+    padding: 9px 10px;
+  }
+
+  .class-node__slot {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .class-node__slot small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .class-node__slot-editor {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .class-node__slot-editor input,
+  .class-node__slot-editor select {
+    min-height: 34px;
+  }
+
+  .class-node__icon-button {
+    min-height: 34px;
+    min-width: 34px;
   }
 }

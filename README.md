@@ -145,6 +145,16 @@ ipad-wrapper/GeneralOntologyEditor.xcodeproj
 
 Open it with Xcode on a Mac, choose a signing team, and run it on an iPad or iPad simulator. On a physical iPad, set the app's server URL to the LAN address of the machine hosting this Docker app, such as `http://192.168.1.25:8010/`.
 
+## Android Wrapper
+
+An optional Android WebView wrapper app is available in:
+
+```text
+android-wrapper/
+```
+
+Open it with Android Studio, sync Gradle, and run the `app` configuration. In the Android emulator, use `http://10.0.2.2:8010/` to reach the editor server running on the host machine. On a physical Android device, use the LAN address of the machine hosting this Docker app.
+
 ## Stop The App
 
 1. Stop the running containers.
@@ -162,6 +172,7 @@ General-Ontology-Editor/
   schemas/          LinkML source ontology schema
   scripts/          Artifact generation scripts
   generated/        Generated JSON Schema and SHACL files
+  android-wrapper/  Android WebView wrapper
   ipad-wrapper/     SwiftUI WKWebView iPadOS wrapper
   docker-compose.yml
 ```

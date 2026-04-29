@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ontology Editor</string>
+    <string name="reload">Reload</string>
+    <string name="server">Server</string>
+    <string name="server_url">Editor Server</string>
+    <string name="server_url_help">Use 10.0.2.2 for an Android emulator, or this server machine's LAN address on a physical device.</string>
+    <string name="apply">Apply</string>
+    <string name="file_picker_unavailable">No file picker is available on this device.</string>
+</resources>
