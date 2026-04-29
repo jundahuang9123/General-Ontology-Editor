@@ -1,6 +1,5 @@
 import { useRef } from 'react';
-import { Download, FileDown, Plus, Save, Tags } from 'lucide-react';
-import { Upload } from 'lucide-react';
+import { Download, Eye, EyeOff, FileDown, Plus, Save, Tags, Upload } from 'lucide-react';
 import { useEditorStore } from '../store';
 
 export type ExportKind = 'rdf' | 'shacl';
@@ -9,10 +8,12 @@ type ToolbarProps = {
   onExport: (kind: ExportKind) => Promise<void>;
   onImport: (file: File) => Promise<void>;
   onSave: () => Promise<void>;
+  onToggleYaml: () => void;
   status: string;
+  yamlVisible: boolean;
 };
 
-export function Toolbar({ onExport, onImport, onSave, status }: ToolbarProps) {
+export function Toolbar({ onExport, onImport, onSave, onToggleYaml, status, yamlVisible }: ToolbarProps) {
   const addClass = useEditorStore((state) => state.addClass);
   const addEnum = useEditorStore((state) => state.addEnum);
   const yaml = useEditorStore((state) => state.yaml());
@@ -46,6 +47,10 @@ export function Toolbar({ onExport, onImport, onSave, status }: ToolbarProps) {
         <button onClick={downloadYaml} title="Download YAML">
           <Download size={16} />
           YAML
+        </button>
+        <button aria-pressed={yamlVisible} onClick={onToggleYaml} title={yamlVisible ? 'Hide live YAML' : 'Show live YAML'}>
+          {yamlVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+          Live YAML
         </button>
         <button onClick={() => fileInput.current?.click()} title="Upload RDF, OWL, or SHACL">
           <Upload size={16} />

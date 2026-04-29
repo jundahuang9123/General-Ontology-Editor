@@ -24,6 +24,12 @@ XSD_RANGES = {
 
 STANDARD_PREFIXES = {'xml', 'rdf', 'rdfs', 'xsd', 'owl', 'sh', 'skos', 'linkml'}
 
+OWL_CLASS_AXIOMS = (RDFS.subClassOf, OWL.equivalentClass)
+OWL_RANGE_PREDICATES = (OWL.someValuesFrom, OWL.allValuesFrom, OWL.onClass, OWL.onDataRange)
+OWL_MIN_CARDINALITY = (OWL.minCardinality, OWL.minQualifiedCardinality)
+OWL_MAX_CARDINALITY = (OWL.maxCardinality, OWL.maxQualifiedCardinality)
+OWL_EXACT_CARDINALITY = (OWL.cardinality, OWL.qualifiedCardinality)
+
 
 def import_rdf_schema(text: str, filename: str, defaults: dict[str, Any]) -> dict[str, Any]:
     graph = parse_graph(text, filename)
@@ -81,6 +87,7 @@ def import_rdf_schema(text: str, filename: str, defaults: dict[str, Any]) -> dic
 
     import_shacl_shapes(graph, classes, slots, enums, class_names, slot_names, ensure_class, ensure_slot)
     import_rdfs_properties(graph, classes, slots, class_names, ensure_class, ensure_slot)
+    import_owl_restrictions(graph, classes, slots, class_names, ensure_class, ensure_slot)
 
     remove_empty_slots(classes)
 
@@ -163,6 +170,10 @@ def discover_class_uris(graph: Graph) -> set[URIRef]:
             target_class = target_class_for_shape(graph, node_shape)
             if isinstance(target_class, URIRef):
                 class_uris.add(target_class)
+    for restriction in discover_owl_restrictions(graph):
+        range_uri = range_from_owl_restriction(graph, restriction)
+        if isinstance(range_uri, URIRef) and str(range_uri) not in XSD_RANGES and range_uri != RDFS.Literal:
+            class_uris.add(range_uri)
     for child, parent in graph.subject_objects(RDFS.subClassOf):
         if isinstance(child, URIRef):
             class_uris.add(child)
@@ -184,6 +195,7 @@ def discover_property_uris(graph: Graph) -> set[URIRef]:
     property_uris.update(uri for uri in graph.subjects(RDFS.domain, None) if isinstance(uri, URIRef))
     property_uris.update(uri for uri in graph.subjects(RDFS.range, None) if isinstance(uri, URIRef))
     property_uris.update(uri for uri in graph.objects(None, SH.path) if isinstance(uri, URIRef))
+    property_uris.update(uri for uri in graph.objects(None, OWL.onProperty) if isinstance(uri, URIRef))
     return property_uris
 
 
@@ -272,6 +284,47 @@ def import_rdfs_properties(graph: Graph, classes, slots, class_names, ensure_cla
                     slot['range'] = ensure_class(range_uri)
 
 
+def import_owl_restrictions(graph: Graph, classes, slots, class_names, ensure_class, ensure_slot) -> None:
+    for class_uri in discover_class_uris(graph):
+        class_name = ensure_class(class_uri)
+        for restriction in restrictions_for_class(graph, class_uri):
+            property_uri = graph.value(restriction, OWL.onProperty)
+            if not isinstance(property_uri, URIRef):
+                continue
+
+            slot_name = ensure_slot(property_uri)
+            slot = slots[slot_name]
+            range_uri = range_from_owl_restriction(graph, restriction)
+            if isinstance(range_uri, URIRef):
+                apply_range_uri(slot, range_uri, ensure_class)
+
+            some_values = graph.value(restriction, OWL.someValuesFrom)
+            min_count = first_numeric_literal(graph, restriction, OWL_MIN_CARDINALITY)
+            max_count = first_numeric_literal(graph, restriction, OWL_MAX_CARDINALITY)
+            exact_count = first_numeric_literal(graph, restriction, OWL_EXACT_CARDINALITY)
+            if exact_count is not None:
+                min_count = exact_count
+                max_count = exact_count
+
+            if some_values is not None or (min_count is not None and min_count >= 1):
+                slot['required'] = True
+            if max_count is None or max_count > 1:
+                slot['multivalued'] = True
+            elif max_count == 1:
+                slot.pop('multivalued', None)
+
+            append_unique(classes[class_name].setdefault('slots', []), slot_name)
+
+
+def apply_range_uri(slot: dict[str, Any], range_uri: URIRef, ensure_class) -> None:
+    if str(range_uri) in XSD_RANGES:
+        slot['range'] = XSD_RANGES[str(range_uri)]
+    elif range_uri == RDFS.Literal:
+        slot['range'] = 'string'
+    else:
+        slot['range'] = ensure_class(range_uri)
+
+
 def curie_for(uri: URIRef, prefixes: dict[str, str]) -> str:
     text = str(uri)
     for prefix, namespace in sorted(prefixes.items(), key=lambda item: len(item[1]), reverse=True):
@@ -354,6 +407,14 @@ def numeric_literal(value) -> int | None:
         return None
 
 
+def first_numeric_literal(graph: Graph, subject: BNode | URIRef, predicates: tuple[URIRef, ...]) -> int | None:
+    for predicate in predicates:
+        value = numeric_literal(graph.value(subject, predicate))
+        if value is not None:
+            return value
+    return None
+
+
 def append_unique(values: list[str], value: str) -> None:
     if value not in values:
         values.append(value)
@@ -372,3 +433,52 @@ def is_resource_node(value: Any) -> bool:
 def target_class_for_shape(graph: Graph, shape: BNode | URIRef) -> URIRef | None:
     target = graph.value(shape, SH.targetClass)
     return target if isinstance(target, URIRef) else None
+
+
+def discover_owl_restrictions(graph: Graph) -> set[BNode | URIRef]:
+    restrictions: set[BNode | URIRef] = set()
+    restrictions.update(node for node in graph.subjects(RDF.type, OWL.Restriction) if is_resource_node(node))
+    restrictions.update(node for node in graph.subjects(OWL.onProperty, None) if is_resource_node(node))
+    return restrictions
+
+
+def restrictions_for_class(graph: Graph, class_uri: URIRef) -> set[BNode | URIRef]:
+    restrictions: set[BNode | URIRef] = set()
+    for predicate in OWL_CLASS_AXIOMS:
+        for axiom_node in graph.objects(class_uri, predicate):
+            for member in owl_axiom_members(graph, axiom_node):
+                if is_owl_restriction(graph, member):
+                    restrictions.add(member)
+    return restrictions
+
+
+def owl_axiom_members(graph: Graph, node, seen: set[Any] | None = None):
+    if not is_resource_node(node):
+        return
+
+    seen = seen or set()
+    if node in seen:
+        return
+    seen.add(node)
+    yield node
+
+    intersection = graph.value(node, OWL.intersectionOf)
+    if intersection is None:
+        return
+
+    for member in Collection(graph, intersection):
+        yield from owl_axiom_members(graph, member, seen)
+
+
+def is_owl_restriction(graph: Graph, node) -> bool:
+    return is_resource_node(node) and (
+        (node, RDF.type, OWL.Restriction) in graph or graph.value(node, OWL.onProperty) is not None
+    )
+
+
+def range_from_owl_restriction(graph: Graph, restriction: BNode | URIRef) -> URIRef | None:
+    for predicate in OWL_RANGE_PREDICATES:
+        range_uri = graph.value(restriction, predicate)
+        if isinstance(range_uri, URIRef):
+            return range_uri
+    return None

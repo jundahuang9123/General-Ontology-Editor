@@ -112,6 +112,10 @@ button.danger {
   height: calc(100vh - 78px);
 }
 
+.workspace--yaml-hidden {
+  grid-template-rows: minmax(420px, calc(100vh - 78px));
+}
+
 .canvas {
   background: #f8fafc;
   border-right: 1px solid var(--border);
@@ -123,6 +127,10 @@ button.danger {
   border-bottom: 1px solid var(--border);
   overflow: auto;
   padding: 16px;
+}
+
+.workspace--yaml-hidden .inspector {
+  border-bottom: 0;
 }
 
 .inspector h2,
@@ -390,6 +398,10 @@ button.danger {
     grid-template-columns: 1fr;
     grid-template-rows: 430px auto 280px;
     height: auto;
+  }
+
+  .workspace--yaml-hidden {
+    grid-template-rows: 430px auto;
   }
 
   .canvas {

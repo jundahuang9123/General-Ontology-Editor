@@ -19,7 +19,11 @@ import './styles.css';
 
 const nodeTypes = { classNode: ClassNode };
 
-function EditorCanvas() {
+type EditorCanvasProps = {
+  yamlVisible: boolean;
+};
+
+function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
   const schema = useEditorStore((state) => state.schema);
   const positions = useEditorStore((state) => state.positions);
   const selected = useEditorStore((state) => state.selected);
@@ -44,7 +48,7 @@ function EditorCanvas() {
   );
 
   return (
-    <div className="workspace">
+    <div className={`workspace ${yamlVisible ? '' : 'workspace--yaml-hidden'}`}>
       <section className="canvas">
         <ReactFlow
           nodes={flow.nodes}
@@ -63,25 +67,27 @@ function EditorCanvas() {
         </ReactFlow>
       </section>
       <Inspector />
-      <section className="yaml-panel">
-        <div className="yaml-panel__header">
-          <h2>Live LinkML YAML</h2>
-          <span>{selected ? `${selected.kind}: ${selected.id}` : 'Schema output'}</span>
-        </div>
-        <Editor
-          height="100%"
-          language="yaml"
-          theme="vs-dark"
-          value={yaml}
-          options={{
-            readOnly: true,
-            minimap: { enabled: false },
-            fontSize: 12,
-            wordWrap: 'on',
-            scrollBeyondLastLine: false,
-          }}
-        />
-      </section>
+      {yamlVisible ? (
+        <section className="yaml-panel">
+          <div className="yaml-panel__header">
+            <h2>Live LinkML YAML</h2>
+            <span>{selected ? `${selected.kind}: ${selected.id}` : 'Schema output'}</span>
+          </div>
+          <Editor
+            height="100%"
+            language="yaml"
+            theme="vs-dark"
+            value={yaml}
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: 12,
+              wordWrap: 'on',
+              scrollBeyondLastLine: false,
+            }}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -90,6 +96,7 @@ export default function App() {
   const loadSchema = useEditorStore((state) => state.loadSchema);
   const yaml = useEditorStore((state) => state.yaml);
   const [status, setStatus] = useState('Loading schema...');
+  const [yamlVisible, setYamlVisible] = useState(true);
 
   useEffect(() => {
     fetch('/api/schema/model')
@@ -168,11 +175,18 @@ export default function App() {
   const provider = useMemo(
     () => (
       <ReactFlowProvider>
-        <Toolbar onExport={exportSchema} onImport={importSchema} onSave={saveSchema} status={status} />
-        <EditorCanvas />
+        <Toolbar
+          onExport={exportSchema}
+          onImport={importSchema}
+          onSave={saveSchema}
+          onToggleYaml={() => setYamlVisible((visible) => !visible)}
+          status={status}
+          yamlVisible={yamlVisible}
+        />
+        <EditorCanvas yamlVisible={yamlVisible} />
       </ReactFlowProvider>
     ),
-    [exportSchema, importSchema, saveSchema, status],
+    [exportSchema, importSchema, saveSchema, status, yamlVisible],
   );
 
   return provider;
