@@ -118,30 +118,29 @@ button.danger {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-rows: minmax(420px, calc(100vh - 78px - 260px)) 260px;
+  grid-template-areas: "yaml canvas inspector";
+  grid-template-columns: var(--yaml-width, 380px) minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(420px, 1fr);
   height: calc(100vh - 78px);
 }
 
 .workspace--yaml-hidden {
-  grid-template-rows: minmax(420px, calc(100vh - 78px));
+  grid-template-areas: "canvas inspector";
+  grid-template-columns: minmax(0, 1fr) 320px;
 }
 
 .canvas {
   background: #f8fafc;
   border-right: 1px solid var(--border);
+  grid-area: canvas;
   min-height: 420px;
 }
 
 .inspector {
   background: var(--panel);
-  border-bottom: 1px solid var(--border);
+  grid-area: inspector;
   overflow: auto;
   padding: 16px;
-}
-
-.workspace--yaml-hidden .inspector {
-  border-bottom: 0;
 }
 
 .inspector h2,
@@ -233,9 +232,14 @@ button.danger {
 
 .yaml-panel {
   background: #111827;
-  border-top: 1px solid var(--border);
-  grid-column: 1 / -1;
-  min-height: 240px;
+  border-right: 1px solid var(--border);
+  display: grid;
+  grid-area: yaml;
+  grid-template-rows: 38px minmax(0, 1fr);
+  min-height: 420px;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
 }
 
 .yaml-panel__header {
@@ -255,6 +259,37 @@ button.danger {
 .yaml-panel__header span {
   color: #94a3b8;
   font-size: 12px;
+}
+
+.yaml-panel__resizer {
+  bottom: 0;
+  cursor: col-resize;
+  position: absolute;
+  right: -5px;
+  top: 0;
+  width: 10px;
+  z-index: 5;
+}
+
+.yaml-panel__resizer::after {
+  background: transparent;
+  bottom: 0;
+  content: "";
+  left: 4px;
+  position: absolute;
+  top: 0;
+  width: 2px;
+}
+
+.yaml-panel__resizer:hover::after,
+.yaml-panel__resizer:focus-visible::after,
+.workspace--resizing .yaml-panel__resizer::after {
+  background: var(--accent);
+}
+
+.workspace--resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .modal-backdrop {
@@ -491,17 +526,35 @@ button.danger {
   }
 
   .workspace {
+    grid-template-areas:
+      "canvas"
+      "inspector"
+      "yaml";
     grid-template-columns: 1fr;
     grid-template-rows: 430px auto 280px;
     height: auto;
   }
 
   .workspace--yaml-hidden {
+    grid-template-areas:
+      "canvas"
+      "inspector";
+    grid-template-columns: 1fr;
     grid-template-rows: 430px auto;
   }
 
   .canvas {
     border-right: 0;
+  }
+
+  .yaml-panel {
+    border-right: 0;
+    border-top: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  .yaml-panel__resizer {
+    display: none;
   }
 }
 
@@ -573,6 +626,7 @@ button.danger {
   }
 
   .yaml-panel {
+    grid-template-rows: 34px minmax(0, 1fr);
     min-height: 260px;
   }
 

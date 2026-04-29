@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Background,
   Controls,
@@ -22,11 +22,15 @@ const nodeTypes = { classNode: ClassNode };
 
 type ImportMode = 'override' | 'merge';
 
+const MIN_YAML_WIDTH = 260;
+const MAX_YAML_WIDTH = 640;
+
 type EditorCanvasProps = {
   yamlVisible: boolean;
 };
 
 function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
+  const workspaceRef = useRef<HTMLDivElement>(null);
   const schema = useEditorStore((state) => state.schema);
   const positions = useEditorStore((state) => state.positions);
   const selected = useEditorStore((state) => state.selected);
@@ -35,6 +39,11 @@ function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
   const connectClasses = useEditorStore((state) => state.connectClasses);
   const yaml = useEditorStore((state) => state.yaml());
   const flow = useMemo(() => schemaToFlow(schema, positions), [schema, positions]);
+  const [yamlWidth, setYamlWidth] = useState(() => {
+    const storedWidth = Number(window.localStorage.getItem('yamlPanelWidth'));
+    return Number.isFinite(storedWidth) ? Math.min(MAX_YAML_WIDTH, Math.max(MIN_YAML_WIDTH, storedWidth)) : 380;
+  });
+  const [resizingYaml, setResizingYaml] = useState(false);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -50,26 +59,41 @@ function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
     [connectClasses],
   );
 
+  useEffect(() => {
+    window.localStorage.setItem('yamlPanelWidth', String(yamlWidth));
+  }, [yamlWidth]);
+
+  useEffect(() => {
+    if (!resizingYaml) return;
+
+    function onPointerMove(event: PointerEvent) {
+      const bounds = workspaceRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+
+      const nextWidth = event.clientX - bounds.left;
+      setYamlWidth(Math.min(MAX_YAML_WIDTH, Math.max(MIN_YAML_WIDTH, nextWidth)));
+    }
+
+    function onPointerUp() {
+      setResizingYaml(false);
+    }
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, [resizingYaml]);
+
+  const workspaceStyle = { '--yaml-width': `${yamlWidth}px` } as CSSProperties;
+
   return (
-    <div className={`workspace ${yamlVisible ? '' : 'workspace--yaml-hidden'}`}>
-      <section className="canvas">
-        <ReactFlow
-          nodes={flow.nodes}
-          edges={flow.edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onPaneClick={() => setSelected(null)}
-          nodesDraggable
-          fitView
-        >
-          <Background color="#d4dbe8" gap={18} />
-          <Controls />
-          <MiniMap pannable zoomable />
-        </ReactFlow>
-      </section>
-      <Inspector />
+    <div
+      className={`workspace ${yamlVisible ? '' : 'workspace--yaml-hidden'} ${resizingYaml ? 'workspace--resizing' : ''}`}
+      ref={workspaceRef}
+      style={workspaceStyle}
+    >
       {yamlVisible ? (
         <section className="yaml-panel">
           <div className="yaml-panel__header">
@@ -89,8 +113,48 @@ function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
               scrollBeyondLastLine: false,
             }}
           />
+          <div
+            aria-label="Resize live YAML panel"
+            aria-orientation="vertical"
+            className="yaml-panel__resizer"
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                setYamlWidth((width) => Math.max(MIN_YAML_WIDTH, width - 24));
+              }
+              if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                setYamlWidth((width) => Math.min(MAX_YAML_WIDTH, width + 24));
+              }
+            }}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              setResizingYaml(true);
+            }}
+            role="separator"
+            tabIndex={0}
+            title="Drag to resize live YAML"
+          />
         </section>
       ) : null}
+      <section className="canvas">
+        <ReactFlow
+          nodes={flow.nodes}
+          edges={flow.edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onPaneClick={() => setSelected(null)}
+          nodesDraggable
+          fitView
+        >
+          <Background color="#d4dbe8" gap={18} />
+          <Controls />
+          <MiniMap pannable zoomable />
+        </ReactFlow>
+      </section>
+      <Inspector />
     </div>
   );
 }
