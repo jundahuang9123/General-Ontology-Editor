@@ -17,6 +17,13 @@ export function emptySchema(): SchemaModel {
     },
     imports: ['linkml:types'],
     default_prefix: 'ex',
+    default_range: 'string',
+    types: {
+      anyURI: {
+        uri: 'xsd:anyURI',
+        base: 'str',
+      },
+    },
     classes: {},
     slots: {},
     enums: {},
@@ -49,17 +56,21 @@ export function serializeOntologySchema(schema: SchemaModel): string {
     ]),
   );
 
-  const doc = {
+  const doc: Record<string, unknown> = {
     id: schema.id,
     name: schema.name,
     title: schema.title,
     prefixes: schema.prefixes,
     imports: schema.imports,
     default_prefix: schema.default_prefix,
+    default_range: schema.default_range,
     classes: schema.classes,
     slots: schema.slots,
     enums: cleanEnums,
   };
+  if (schema.types) {
+    doc.types = schema.types;
+  }
 
   return yaml.dump(doc, {
     lineWidth: 100,

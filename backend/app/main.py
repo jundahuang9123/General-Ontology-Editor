@@ -5,12 +5,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from jsonschema import Draft202012Validator
 from rdflib import BNode, Graph, Literal, Namespace, RDF, RDFS, URIRef, XSD
 from rdflib.collection import Collection
+
+from app.schema_importer import import_rdf_schema
 
 BASE_DIR = Path('/app') if Path('/app').exists() else Path(__file__).resolve().parents[2]
 FRONTEND_DIST = BASE_DIR / 'frontend-dist'
@@ -146,6 +148,33 @@ def save_schema_linkml(payload: dict[str, str]) -> JSONResponse:
 
     LINKML_SCHEMA_PATH.write_text(yaml.safe_dump(parsed, sort_keys=False), encoding='utf-8')
     return JSONResponse({'status': 'ok'})
+
+
+@app.post('/api/schema/import')
+async def import_schema(file: UploadFile = File(...)) -> JSONResponse:
+    content = await file.read()
+    try:
+        text = content.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail='Uploaded RDF/SHACL file must be UTF-8 text') from exc
+
+    defaults = {
+        'id': 'https://example.org/linkml/imported-ontology',
+        'name': 'imported_ontology',
+        'prefixes': {
+            'linkml': 'https://w3id.org/linkml/',
+            'ex': 'https://example.org/ontology/',
+        },
+        'imports': ['linkml:types'],
+        'default_prefix': 'ex',
+    }
+
+    try:
+        schema = import_rdf_schema(text, file.filename or 'uploaded.ttl', defaults)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse(schema)
 
 
 @app.get('/schema/options')

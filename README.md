@@ -62,6 +62,17 @@ The app uses a React Flow diagram as the editing surface and keeps the schema mo
     ```
 13. Click `RDF` or `SHACL` to download Turtle exports from the current ontology.
 
+## Continue From Existing RDF Or SHACL
+
+1. Open `http://localhost:8010/`.
+2. Click `Upload`.
+3. Select an RDF, OWL, Turtle, JSON-LD, N-Triples, N3, TriG, or SHACL file.
+4. Review the imported classes and properties on the diagram.
+5. Continue editing in the canvas and inspector.
+6. Click `Save` to persist the imported model as LinkML YAML.
+
+The importer reads common OWL/RDFS class and property triples, plus SHACL node shapes, property shapes, ranges, required flags, multivalued constraints, and simple enum lists.
+
 ## Generate Schema Artifacts
 
 After saving ontology changes, regenerate derived artifacts:
@@ -87,8 +98,9 @@ After saving ontology changes, regenerate derived artifacts:
 4. JSON Schema: `http://localhost:8010/schema`
 5. Schema model API: `http://localhost:8010/api/schema/model`
 6. LinkML YAML API: `http://localhost:8010/api/schema/linkml`
-7. SHACL export: `http://localhost:8010/schema/export/shacl`
-8. RDF export: `http://localhost:8010/schema/export/rdf`
+7. RDF/SHACL import API: `http://localhost:8010/api/schema/import`
+8. SHACL export: `http://localhost:8010/schema/export/shacl`
+9. RDF export: `http://localhost:8010/schema/export/rdf`
 
 ## Developer Frontend Workflow
 
