@@ -84,6 +84,8 @@ export function schemaToFlow(schema: SchemaModel, positions: Record<string, { x:
   const nodes: Node[] = classNames.map((className, index) => ({
     id: className,
     type: 'classNode',
+    draggable: true,
+    selectable: true,
     position: positions[className] ?? {
       x: 80 + (index % 3) * 320,
       y: 80 + Math.floor(index / 3) * 260,

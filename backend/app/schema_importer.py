@@ -155,6 +155,14 @@ def discover_class_uris(graph: Graph) -> set[URIRef]:
     for rdf_type in (OWL.Class, RDFS.Class):
         class_uris.update(uri for uri in graph.subjects(RDF.type, rdf_type) if isinstance(uri, URIRef))
     class_uris.update(uri for uri in graph.objects(None, SH.targetClass) if isinstance(uri, URIRef))
+    for property_shape in graph.objects(None, SH.property):
+        if not is_resource_node(property_shape):
+            continue
+        node_shape = graph.value(property_shape, SH.node)
+        if is_resource_node(node_shape):
+            target_class = target_class_for_shape(graph, node_shape)
+            if isinstance(target_class, URIRef):
+                class_uris.add(target_class)
     for child, parent in graph.subject_objects(RDFS.subClassOf):
         if isinstance(child, URIRef):
             class_uris.add(child)
@@ -196,7 +204,7 @@ def import_shacl_shapes(
             continue
         class_name = ensure_class(target)
         for property_shape in graph.objects(shape, SH.property):
-            if not isinstance(property_shape, BNode):
+            if not is_resource_node(property_shape):
                 continue
             path = graph.value(property_shape, SH.path)
             if not isinstance(path, URIRef):
@@ -219,10 +227,16 @@ def import_shacl_shapes(
             class_names[str(target)] = class_name
 
 
-def range_from_shacl(graph: Graph, property_shape: BNode, classes, enums, ensure_class, slot_name: str) -> str:
+def range_from_shacl(graph: Graph, property_shape: BNode | URIRef, classes, enums, ensure_class, slot_name: str) -> str:
     class_range = graph.value(property_shape, SH['class'])
     if isinstance(class_range, URIRef):
         return ensure_class(class_range)
+
+    node_shape = graph.value(property_shape, SH.node)
+    if is_resource_node(node_shape):
+        target_class = target_class_for_shape(graph, node_shape)
+        if isinstance(target_class, URIRef):
+            return ensure_class(target_class)
 
     datatype = graph.value(property_shape, SH.datatype)
     if isinstance(datatype, URIRef):
@@ -349,3 +363,12 @@ def remove_empty_slots(classes: dict[str, dict[str, Any]]) -> None:
     for class_def in classes.values():
         if not class_def.get('slots'):
             class_def.pop('slots', None)
+
+
+def is_resource_node(value: Any) -> bool:
+    return isinstance(value, (BNode, URIRef))
+
+
+def target_class_for_shape(graph: Graph, shape: BNode | URIRef) -> URIRef | None:
+    target = graph.value(shape, SH.targetClass)
+    return target if isinstance(target, URIRef) else None

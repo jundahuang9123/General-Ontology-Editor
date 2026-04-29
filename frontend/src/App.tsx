@@ -13,19 +13,21 @@ import '@xyflow/react/dist/style.css';
 import { ClassNode } from './components/ClassNode';
 import { Inspector } from './components/Inspector';
 import { Toolbar, type ExportKind } from './components/Toolbar';
+import { schemaToFlow } from './lib/schema';
 import { useEditorStore } from './store';
 import './styles.css';
 
 const nodeTypes = { classNode: ClassNode };
 
 function EditorCanvas() {
-  const getFlow = useEditorStore((state) => state.getFlow);
+  const schema = useEditorStore((state) => state.schema);
+  const positions = useEditorStore((state) => state.positions);
   const selected = useEditorStore((state) => state.selected);
   const setSelected = useEditorStore((state) => state.setSelected);
   const onNodesChange = useEditorStore((state) => state.onNodesChange);
   const connectClasses = useEditorStore((state) => state.connectClasses);
   const yaml = useEditorStore((state) => state.yaml());
-  const flow = getFlow();
+  const flow = useMemo(() => schemaToFlow(schema, positions), [schema, positions]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -52,6 +54,7 @@ function EditorCanvas() {
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onPaneClick={() => setSelected(null)}
+          nodesDraggable
           fitView
         >
           <Background color="#d4dbe8" gap={18} />

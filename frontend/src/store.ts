@@ -1,8 +1,7 @@
 import { create } from 'zustand';
-import type { Connection, Edge, Node, NodeChange } from '@xyflow/react';
-import { applyNodeChanges } from '@xyflow/react';
+import type { Connection, NodeChange } from '@xyflow/react';
 import type { SchemaModel, SelectedItem } from './types';
-import { emptySchema, normalizeSchema, schemaToFlow, serializeOntologySchema } from './lib/schema';
+import { emptySchema, normalizeSchema, serializeOntologySchema } from './lib/schema';
 
 type EditorState = {
   schema: SchemaModel;
@@ -10,7 +9,6 @@ type EditorState = {
   selected: SelectedItem;
   loadSchema: (schema: SchemaModel) => void;
   setSelected: (selected: SelectedItem) => void;
-  getFlow: () => { nodes: Node[]; edges: Edge[] };
   onNodesChange: (changes: NodeChange[]) => void;
   connectClasses: (connection: Connection) => void;
   addClass: () => void;
@@ -39,16 +37,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   loadSchema: (schema) => set({ schema: normalizeSchema(schema), positions: {}, selected: null }),
   setSelected: (selected) => set({ selected }),
-  getFlow: () => schemaToFlow(get().schema, get().positions),
 
   onNodesChange: (changes) => {
-    const current = get().getFlow().nodes;
-    const next = applyNodeChanges(changes, current);
     const positions = { ...get().positions };
-    next.forEach((node) => {
-      positions[node.id] = node.position;
+    let didMove = false;
+
+    changes.forEach((change) => {
+      if (change.type === 'position' && change.position) {
+        positions[change.id] = change.position;
+        didMove = true;
+      }
     });
-    set({ positions });
+
+    if (didMove) {
+      set({ positions });
+    }
   },
 
   connectClasses: (connection) => {
