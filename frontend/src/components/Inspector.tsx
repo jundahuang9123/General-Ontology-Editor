@@ -98,7 +98,10 @@ export function Inspector() {
         <div className="slot-list">
           {(classDef.slots ?? []).map((slotName) => (
             <div className="slot-row" key={slotName}>
-              <button onClick={() => setSelected({ kind: 'slot', id: slotName, classId: selected.id })}>
+              <button
+                className={schema.slots[slotName]?.required ? 'property-button--required' : undefined}
+                onClick={() => setSelected({ kind: 'slot', id: slotName, classId: selected.id })}
+              >
                 {slotName}
               </button>
               <button className="icon-button" onClick={() => removeSlotFromClass(selected.id, slotName)}>

@@ -6,7 +6,7 @@ export type ExportKind = 'rdf' | 'shacl';
 
 type ToolbarProps = {
   onExport: (kind: ExportKind) => Promise<void>;
-  onImport: (file: File) => Promise<void>;
+  onImport: (file: File) => void;
   onSave: () => Promise<void>;
   onToggleYaml: () => void;
   status: string;

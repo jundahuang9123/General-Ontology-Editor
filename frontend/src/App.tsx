@@ -15,9 +15,12 @@ import { Inspector } from './components/Inspector';
 import { Toolbar, type ExportKind } from './components/Toolbar';
 import { schemaToFlow } from './lib/schema';
 import { useEditorStore } from './store';
+import type { SchemaModel } from './types';
 import './styles.css';
 
 const nodeTypes = { classNode: ClassNode };
+
+type ImportMode = 'override' | 'merge';
 
 type EditorCanvasProps = {
   yamlVisible: boolean;
@@ -94,9 +97,12 @@ function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
 
 export default function App() {
   const loadSchema = useEditorStore((state) => state.loadSchema);
+  const mergeSchema = useEditorStore((state) => state.mergeSchema);
   const yaml = useEditorStore((state) => state.yaml);
   const [status, setStatus] = useState('Loading schema...');
   const [yamlVisible, setYamlVisible] = useState(true);
+  const [pendingUpload, setPendingUpload] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     fetch('/api/schema/model')
@@ -149,27 +155,46 @@ export default function App() {
     setStatus(`${label} exported`);
   }, []);
 
+  const selectImportFile = useCallback((file: File) => {
+    setPendingUpload(file);
+  }, []);
+
   const importSchema = useCallback(
-    async (file: File) => {
-      setStatus(`Importing ${file.name}...`);
+    async (mode: ImportMode) => {
+      if (!pendingUpload) return;
+
+      setImporting(true);
+      setStatus(`Importing ${pendingUpload.name}...`);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', pendingUpload);
 
-      const res = await fetch('/api/schema/import', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) {
-        const detail = await res.text();
-        setStatus(`Import failed: ${detail}`);
-        return;
+      try {
+        const res = await fetch('/api/schema/import', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const detail = await res.text();
+          setStatus(`Import failed: ${detail}`);
+          return;
+        }
+
+        const schema = (await res.json()) as SchemaModel;
+        if (mode === 'merge') {
+          mergeSchema(schema);
+          setStatus(`Merged ${pendingUpload.name} into the current diagram.`);
+        } else {
+          loadSchema(schema);
+          setStatus(`Imported ${pendingUpload.name}. Review the diagram, then Save to persist YAML.`);
+        }
+        setPendingUpload(null);
+      } catch (err) {
+        setStatus(`Import failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      } finally {
+        setImporting(false);
       }
-
-      const schema = await res.json();
-      loadSchema(schema);
-      setStatus(`Imported ${file.name}. Review the diagram, then Save to persist YAML.`);
     },
-    [loadSchema],
+    [loadSchema, mergeSchema, pendingUpload],
   );
 
   const provider = useMemo(
@@ -177,16 +202,37 @@ export default function App() {
       <ReactFlowProvider>
         <Toolbar
           onExport={exportSchema}
-          onImport={importSchema}
+          onImport={selectImportFile}
           onSave={saveSchema}
           onToggleYaml={() => setYamlVisible((visible) => !visible)}
           status={status}
           yamlVisible={yamlVisible}
         />
         <EditorCanvas yamlVisible={yamlVisible} />
+        {pendingUpload ? (
+          <div className="modal-backdrop" role="presentation">
+            <section aria-labelledby="import-modal-title" aria-modal="true" className="import-modal" role="dialog">
+              <div>
+                <h2 id="import-modal-title">Import {pendingUpload.name}</h2>
+                <p>Replace the current diagram, or merge this ontology into what is already open.</p>
+              </div>
+              <div className="import-modal__actions">
+                <button disabled={importing} onClick={() => setPendingUpload(null)} type="button">
+                  Cancel
+                </button>
+                <button disabled={importing} onClick={() => void importSchema('merge')} type="button">
+                  Merge
+                </button>
+                <button className="primary" disabled={importing} onClick={() => void importSchema('override')} type="button">
+                  Override
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </ReactFlowProvider>
     ),
-    [exportSchema, importSchema, saveSchema, status, yamlVisible],
+    [exportSchema, importSchema, importing, pendingUpload, saveSchema, selectImportFile, status, yamlVisible],
   );
 
   return provider;

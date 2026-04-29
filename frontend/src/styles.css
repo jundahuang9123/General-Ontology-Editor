@@ -55,6 +55,11 @@ button.primary:hover {
   background: var(--accent-strong);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 button.danger {
   border-color: #fecaca;
   color: var(--danger);
@@ -205,6 +210,11 @@ button.danger {
   text-overflow: ellipsis;
 }
 
+.property-button--required {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .icon-button {
   min-width: 34px;
   padding: 7px;
@@ -241,6 +251,47 @@ button.danger {
   font-size: 12px;
 }
 
+.modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 50;
+}
+
+.import-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+  display: grid;
+  gap: 18px;
+  max-width: 460px;
+  padding: 20px;
+  width: min(100%, 460px);
+}
+
+.import-modal h2 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+
+.import-modal p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.import-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .class-node {
   background: #ffffff;
   border: 1px solid #94a3b8;
@@ -253,6 +304,29 @@ button.danger {
 
 .react-flow__node-dragging .class-node {
   cursor: grabbing;
+}
+
+.class-node--minimized {
+  align-items: center;
+  border-radius: 999px;
+  display: flex;
+  justify-content: center;
+  max-width: 180px;
+  min-height: 58px;
+  min-width: 104px;
+  padding: 0 18px;
+}
+
+.class-node__bubble-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  max-width: 144px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .class-node.editing {
@@ -280,6 +354,12 @@ button.danger {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.class-node__title-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
 }
 
 .class-node__edit-toggle {
@@ -320,6 +400,12 @@ button.danger {
   white-space: nowrap;
 }
 
+.class-node__slot--required span,
+.class-node__property-name--required {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .class-node__slot small,
 .class-node__empty {
   color: var(--muted);
@@ -350,6 +436,10 @@ button.danger {
   min-width: 0;
   padding: 4px 6px;
   width: 100%;
+}
+
+.class-node__slot-editor input.class-node__property-name--required {
+  border-color: #fecaca;
 }
 
 .class-node__flag {

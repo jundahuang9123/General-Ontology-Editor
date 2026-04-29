@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Plus, Trash2, X } from 'lucide-react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Minimize2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { Slot } from '../types';
 import { useEditorStore } from '../store';
 
@@ -45,6 +45,7 @@ function InlineSlotEditor({ className, slotName, slot, ranges }: InlineSlotEdito
     <div className="class-node__slot-editor nodrag nowheel" onDoubleClick={(event) => event.stopPropagation()}>
       <input
         aria-label="Property name"
+        className={required ? 'class-node__property-name--required' : undefined}
         value={name}
         onBlur={commitName}
         onChange={(event) => setName(event.target.value)}
@@ -124,9 +125,17 @@ function InlineSlotEditor({ className, slotName, slot, ranges }: InlineSlotEdito
 export function ClassNode({ data, selected }: NodeProps) {
   const nodeData = data as ClassNodeData;
   const schema = useEditorStore((state) => state.schema);
+  const minimized = useEditorStore((state) => Boolean(state.minimizedClasses[nodeData.label]));
   const addSlot = useEditorStore((state) => state.addSlot);
   const setSelected = useEditorStore((state) => state.setSelected);
+  const toggleClassMinimized = useEditorStore((state) => state.toggleClassMinimized);
+  const updateNodeInternals = useUpdateNodeInternals();
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (minimized) setEditing(false);
+    updateNodeInternals(nodeData.label);
+  }, [minimized, nodeData.label, updateNodeInternals]);
 
   const rangeOptions = useMemo(() => {
     const primitives = ['string', 'anyURI', 'integer', 'float', 'boolean'];
@@ -138,6 +147,23 @@ export function ClassNode({ data, selected }: NodeProps) {
     setSelected({ kind: 'class', id: nodeData.label });
   }
 
+  if (minimized) {
+    return (
+      <div
+        className={`class-node class-node--minimized ${selected ? 'selected' : ''}`}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          toggleClassMinimized(nodeData.label);
+        }}
+        title="Double-click to expand"
+      >
+        <Handle type="target" position={Position.Top} />
+        <span className="class-node__bubble-label">{nodeData.label}</span>
+        <Handle type="source" position={Position.Bottom} />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`class-node ${selected ? 'selected' : ''} ${editing ? 'editing' : ''}`}
@@ -146,17 +172,30 @@ export function ClassNode({ data, selected }: NodeProps) {
       <Handle type="target" position={Position.Top} />
       <div className="class-node__title">
         <span>{nodeData.label}</span>
-        <button
-          className="class-node__edit-toggle nodrag"
-          title={editing ? 'Close diagram editor' : 'Edit class in diagram'}
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            toggleEditing();
-          }}
-        >
-          {editing ? <X size={14} /> : <Pencil size={14} />}
-        </button>
+        <div className="class-node__title-actions">
+          <button
+            className="class-node__edit-toggle nodrag"
+            title="Minimize class"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleClassMinimized(nodeData.label);
+            }}
+          >
+            <Minimize2 size={14} />
+          </button>
+          <button
+            className="class-node__edit-toggle nodrag"
+            title={editing ? 'Close diagram editor' : 'Edit class in diagram'}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleEditing();
+            }}
+          >
+            {editing ? <X size={14} /> : <Pencil size={14} />}
+          </button>
+        </div>
       </div>
       <div className="class-node__slots">
         {nodeData.slots.length === 0 ? (
@@ -174,8 +213,9 @@ export function ClassNode({ data, selected }: NodeProps) {
         ) : (
           nodeData.slots.map((slotName) => {
             const slot = nodeData.slotDefs[slotName];
+            const required = Boolean(slot?.required);
             return (
-              <div className="class-node__slot" key={slotName}>
+              <div className={`class-node__slot ${required ? 'class-node__slot--required' : ''}`} key={slotName}>
                 <span>{slotName}</span>
                 <small>
                   {slot?.range ?? 'string'}

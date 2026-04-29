@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 import type { Edge, Node } from '@xyflow/react';
-import type { SchemaModel } from '../types';
+import type { SchemaClass, SchemaEnum, SchemaModel, Slot } from '../types';
 
 const primitiveRanges = new Set(['string', 'integer', 'float', 'boolean', 'anyURI']);
 
@@ -44,6 +44,162 @@ export function enumValues(value: SchemaModel['enums'][string] | undefined): str
   if (!value) return [];
   if (Array.isArray(value.permissible_values)) return value.permissible_values;
   return Object.keys(value.permissible_values ?? {});
+}
+
+function uniqueName(base: string, existing: Set<string>) {
+  if (!existing.has(base)) return base;
+  let index = 2;
+  while (existing.has(`${base}${index}`)) index += 1;
+  return `${base}${index}`;
+}
+
+function appendUnique(values: string[], value: string) {
+  if (!values.includes(value)) values.push(value);
+}
+
+function mergePrefixes(base: Record<string, string> = {}, incoming: Record<string, string> = {}) {
+  const prefixes = { ...base };
+
+  Object.entries(incoming).forEach(([prefix, namespace]) => {
+    if (!prefixes[prefix] || prefixes[prefix] === namespace) {
+      prefixes[prefix] = namespace;
+      return;
+    }
+
+    let index = 2;
+    while (prefixes[`${prefix}${index}`]) index += 1;
+    prefixes[`${prefix}${index}`] = namespace;
+  });
+
+  return prefixes;
+}
+
+function uriLookup<T extends { class_uri?: string; slot_uri?: string }>(
+  items: Record<string, T>,
+  uriKey: 'class_uri' | 'slot_uri',
+) {
+  return Object.fromEntries(
+    Object.entries(items)
+      .filter(([, value]) => value[uriKey])
+      .map(([name, value]) => [value[uriKey], name]),
+  );
+}
+
+function mergedEnum(existing: SchemaEnum | undefined, incoming: SchemaEnum): SchemaEnum {
+  const values = [...enumValues(existing), ...enumValues(incoming)];
+  return {
+    ...existing,
+    ...incoming,
+    permissible_values: Object.fromEntries([...new Set(values)].map((value) => [value, null])),
+  };
+}
+
+function remapSlot(slot: Slot, classNameMap: Record<string, string>, enumNameMap: Record<string, string>): Slot {
+  return {
+    ...slot,
+    range: classNameMap[slot.range] ?? enumNameMap[slot.range] ?? slot.range,
+  };
+}
+
+function mergeSlot(existing: Slot | undefined, incoming: Slot): Slot {
+  if (!existing) return incoming;
+
+  return {
+    ...incoming,
+    ...existing,
+    description: existing.description ?? incoming.description,
+    slot_uri: existing.slot_uri ?? incoming.slot_uri,
+    range: existing.range && existing.range !== 'string' ? existing.range : incoming.range,
+    required: existing.required || incoming.required || undefined,
+    multivalued: existing.multivalued || incoming.multivalued || undefined,
+  };
+}
+
+function remapClass(classDef: SchemaClass, classNameMap: Record<string, string>, slotNameMap: Record<string, string>) {
+  return {
+    ...classDef,
+    is_a: classDef.is_a ? classNameMap[classDef.is_a] ?? classDef.is_a : undefined,
+    slots: (classDef.slots ?? []).map((slotName) => slotNameMap[slotName] ?? slotName),
+  };
+}
+
+function mergeClass(existing: SchemaClass | undefined, incoming: SchemaClass): SchemaClass {
+  if (!existing) return incoming;
+
+  const slots = [...(existing.slots ?? [])];
+  (incoming.slots ?? []).forEach((slotName) => appendUnique(slots, slotName));
+
+  return {
+    ...incoming,
+    ...existing,
+    description: existing.description ?? incoming.description,
+    class_uri: existing.class_uri ?? incoming.class_uri,
+    is_a: existing.is_a ?? incoming.is_a,
+    slots,
+  };
+}
+
+export function mergeSchemas(baseInput: SchemaModel, incomingInput: SchemaModel): SchemaModel {
+  const base = normalizeSchema(baseInput);
+  const incoming = normalizeSchema(incomingInput);
+  const classNames = new Set(Object.keys(base.classes));
+  const slotNames = new Set(Object.keys(base.slots));
+  const enumNames = new Set(Object.keys(base.enums));
+  const classUriNames = uriLookup(base.classes, 'class_uri');
+  const slotUriNames = uriLookup(base.slots, 'slot_uri');
+
+  const classNameMap: Record<string, string> = {};
+  const slotNameMap: Record<string, string> = {};
+  const enumNameMap: Record<string, string> = {};
+
+  Object.entries(incoming.classes).forEach(([name, classDef]) => {
+    const existingByUri = classDef.class_uri ? classUriNames[classDef.class_uri] : undefined;
+    const nextName = existingByUri ?? uniqueName(name, classNames);
+    classNameMap[name] = nextName;
+    classNames.add(nextName);
+  });
+
+  Object.entries(incoming.enums).forEach(([name]) => {
+    const nextName = uniqueName(name, enumNames);
+    enumNameMap[name] = nextName;
+    enumNames.add(nextName);
+  });
+
+  Object.entries(incoming.slots).forEach(([name, slot]) => {
+    const existingByUri = slot.slot_uri ? slotUriNames[slot.slot_uri] : undefined;
+    const nextName = existingByUri ?? uniqueName(name, slotNames);
+    slotNameMap[name] = nextName;
+    slotNames.add(nextName);
+  });
+
+  const merged: SchemaModel = {
+    ...base,
+    prefixes: mergePrefixes(base.prefixes, incoming.prefixes),
+    imports: [...new Set([...(base.imports ?? []), ...(incoming.imports ?? [])])],
+    types: { ...(base.types ?? {}), ...(incoming.types ?? {}) },
+    classes: structuredClone(base.classes),
+    slots: structuredClone(base.slots),
+    enums: structuredClone(base.enums),
+  };
+
+  Object.entries(incoming.enums).forEach(([name, enumDef]) => {
+    const nextName = enumNameMap[name];
+    merged.enums[nextName] = mergedEnum(merged.enums[nextName], enumDef);
+  });
+
+  Object.entries(incoming.slots).forEach(([name, slot]) => {
+    const nextName = slotNameMap[name];
+    const nextSlot = remapSlot(slot, classNameMap, enumNameMap);
+    merged.slots[nextName] = mergeSlot(merged.slots[nextName], nextSlot);
+  });
+
+  Object.entries(incoming.classes).forEach(([name, classDef]) => {
+    const nextName = classNameMap[name];
+    const nextClass = remapClass(classDef, classNameMap, slotNameMap);
+    merged.classes[nextName] = mergeClass(merged.classes[nextName], nextClass);
+  });
+
+  return merged;
 }
 
 export function serializeOntologySchema(schema: SchemaModel): string {

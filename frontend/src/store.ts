@@ -1,14 +1,17 @@
 import { create } from 'zustand';
 import type { Connection, NodeChange } from '@xyflow/react';
 import type { SchemaModel, SelectedItem } from './types';
-import { emptySchema, normalizeSchema, serializeOntologySchema } from './lib/schema';
+import { emptySchema, mergeSchemas, normalizeSchema, serializeOntologySchema } from './lib/schema';
 
 type EditorState = {
   schema: SchemaModel;
   positions: Record<string, { x: number; y: number }>;
+  minimizedClasses: Record<string, boolean>;
   selected: SelectedItem;
   loadSchema: (schema: SchemaModel) => void;
+  mergeSchema: (schema: SchemaModel) => void;
   setSelected: (selected: SelectedItem) => void;
+  toggleClassMinimized: (name: string) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   connectClasses: (connection: Connection) => void;
   addClass: () => void;
@@ -33,10 +36,14 @@ function uniqueName(base: string, existing: string[]) {
 export const useEditorStore = create<EditorState>((set, get) => ({
   schema: emptySchema(),
   positions: {},
+  minimizedClasses: {},
   selected: null,
 
-  loadSchema: (schema) => set({ schema: normalizeSchema(schema), positions: {}, selected: null }),
+  loadSchema: (schema) => set({ schema: normalizeSchema(schema), positions: {}, minimizedClasses: {}, selected: null }),
+  mergeSchema: (schema) => set({ schema: mergeSchemas(get().schema, schema), selected: null }),
   setSelected: (selected) => set({ selected }),
+  toggleClassMinimized: (name) =>
+    set({ minimizedClasses: { ...get().minimizedClasses, [name]: !get().minimizedClasses[name] } }),
 
   onNodesChange: (changes) => {
     const positions = { ...get().positions };
@@ -101,7 +108,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       });
       const positions = { ...get().positions, [nextName]: get().positions[oldName] ?? { x: 120, y: 120 } };
       delete positions[oldName];
-      set({ schema, positions, selected: { kind: 'class', id: nextName } });
+      const minimizedClasses = { ...get().minimizedClasses, [nextName]: get().minimizedClasses[oldName] };
+      delete minimizedClasses[oldName];
+      set({ schema, positions, minimizedClasses, selected: { kind: 'class', id: nextName } });
       return;
     }
 
@@ -119,7 +128,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
     const positions = { ...get().positions };
     delete positions[name];
-    set({ schema, positions, selected: null });
+    const minimizedClasses = { ...get().minimizedClasses };
+    delete minimizedClasses[name];
+    set({ schema, positions, minimizedClasses, selected: null });
   },
 
   addSlot: (className) => {
