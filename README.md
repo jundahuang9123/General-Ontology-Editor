@@ -60,6 +60,7 @@ The app uses a React Flow diagram as the editing surface and keeps the schema mo
     ```text
     schemas/ontology.yaml
     ```
+13. Click `RDF` or `SHACL` to download Turtle exports from the current ontology.
 
 ## Generate Schema Artifacts
 
