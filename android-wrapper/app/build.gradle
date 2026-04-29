@@ -2,6 +2,10 @@ plugins {
     id "com.android.application"
 }
 
+def frontendDir = file("../../frontend")
+def frontendDistDir = file("../../frontend/dist")
+def bundledEditorDir = file("src/main/assets/editor")
+
 android {
     namespace "com.jundahuang.generalontologyeditor"
     compileSdk 35
@@ -18,4 +22,48 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+tasks.register("buildFrontend") {
+    inputs.files(fileTree(frontendDir) {
+        exclude "dist/**"
+        exclude "node_modules/**"
+    })
+    outputs.dir frontendDistDir
+
+    doLast {
+        def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
+        def npmCheck = isWindows ? ["cmd", "/c", "where", "npm"] : ["sh", "-c", "command -v npm"]
+        def npmAvailable = exec {
+            commandLine npmCheck
+            ignoreExitValue true
+            standardOutput = new ByteArrayOutputStream()
+            errorOutput = new ByteArrayOutputStream()
+        }.exitValue == 0
+
+        if (npmAvailable) {
+            exec {
+                workingDir frontendDir
+                commandLine isWindows ? ["cmd", "/c", "npm", "run", "build"] : ["npm", "run", "build"]
+            }
+            return
+        }
+
+        if (file("${frontendDistDir}/index.html").exists()) {
+            logger.lifecycle("npm was not found; using existing frontend/dist bundle.")
+            return
+        }
+
+        throw new GradleException("npm was not found and frontend/dist is missing. Install Node.js or build/copy frontend/dist before assembling the APK.")
+    }
+}
+
+tasks.register("copyFrontendDist", Copy) {
+    dependsOn "buildFrontend"
+    from frontendDistDir
+    into bundledEditorDir
+}
+
+tasks.named("preBuild").configure {
+    dependsOn "copyFrontendDist"
 }

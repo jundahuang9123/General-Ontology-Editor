@@ -4,10 +4,13 @@ __pycache__/
 node_modules/
 .env
 generated/
+frontend/dist/
 *.log
 android-wrapper/.gradle/
 android-wrapper/build/
 android-wrapper/app/build/
+android-wrapper/app/src/main/assets/editor/
+ipad-wrapper/GeneralOntologyEditor/WebApp/
 android-wrapper/local.properties
 *.apk
 *.aab

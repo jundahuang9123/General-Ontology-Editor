@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import { ClassNode } from './components/ClassNode';
 import { Inspector } from './components/Inspector';
 import { Toolbar, type ExportKind } from './components/Toolbar';
+import { exportSchema as exportSchemaFile, importSchemaFile, loadSchemaModel, saveSchemaYaml } from './lib/schemaApi';
 import { schemaToFlow } from './lib/schema';
 import { useEditorStore } from './store';
 import type { SchemaModel } from './types';
@@ -160,6 +161,7 @@ function EditorCanvas({ yamlVisible }: EditorCanvasProps) {
 }
 
 export default function App() {
+  const schema = useEditorStore((state) => state.schema);
   const loadSchema = useEditorStore((state) => state.loadSchema);
   const mergeSchema = useEditorStore((state) => state.mergeSchema);
   const yaml = useEditorStore((state) => state.yaml);
@@ -169,14 +171,10 @@ export default function App() {
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/schema/model')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((schema) => {
-        loadSchema(schema);
-        setStatus('Loaded');
+    loadSchemaModel()
+      .then((result) => {
+        loadSchema(result.schema);
+        setStatus(result.message);
       })
       .catch((err) => {
         setStatus(`Load failed: ${err.message}`);
@@ -185,39 +183,24 @@ export default function App() {
 
   const saveSchema = useCallback(async () => {
     setStatus('Saving...');
-    const res = await fetch('/api/schema/linkml', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ yaml: yaml() }),
-    });
-    if (!res.ok) {
-      const detail = await res.text();
-      setStatus(`Save failed: ${detail}`);
-      return;
+    try {
+      const result = await saveSchemaYaml(yaml());
+      setStatus(result.message);
+    } catch (error) {
+      setStatus(`Save failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
-    setStatus('Saved to schemas/ontology.yaml');
   }, [yaml]);
 
   const exportSchema = useCallback(async (kind: ExportKind) => {
     const label = kind === 'rdf' ? 'RDF' : 'SHACL';
     setStatus(`Exporting ${label}...`);
-    const res = await fetch(`/schema/export/${kind}`);
-    if (!res.ok) {
-      const detail = await res.text();
-      setStatus(`${label} export failed: ${detail}`);
-      return;
+    try {
+      exportSchemaFile(schema, kind);
+      setStatus(`${label} exported`);
+    } catch (error) {
+      setStatus(`${label} export failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
-
-    const text = await res.text();
-    const blob = new Blob([text], { type: 'text/turtle' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = kind === 'rdf' ? 'ontology.rdf.ttl' : 'ontology.shacl.ttl';
-    link.click();
-    URL.revokeObjectURL(url);
-    setStatus(`${label} exported`);
-  }, []);
+  }, [schema]);
 
   const selectImportFile = useCallback((file: File) => {
     setPendingUpload(file);
@@ -229,21 +212,8 @@ export default function App() {
 
       setImporting(true);
       setStatus(`Importing ${pendingUpload.name}...`);
-      const formData = new FormData();
-      formData.append('file', pendingUpload);
-
       try {
-        const res = await fetch('/api/schema/import', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          const detail = await res.text();
-          setStatus(`Import failed: ${detail}`);
-          return;
-        }
-
-        const schema = (await res.json()) as SchemaModel;
+        const schema = (await importSchemaFile(pendingUpload)) as SchemaModel;
         if (mode === 'merge') {
           mergeSchema(schema);
           setStatus(`Merged ${pendingUpload.name} into the current diagram.`);

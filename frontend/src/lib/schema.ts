@@ -235,6 +235,148 @@ export function serializeOntologySchema(schema: SchemaModel): string {
   });
 }
 
+export function schemaToRdfTurtle(schemaInput: SchemaModel): string {
+  const schema = normalizeSchema(schemaInput);
+  const lines = prefixLines(schema, ['rdf', 'rdfs', 'owl', 'xsd']);
+
+  Object.entries(schema.classes).forEach(([className, classDef]) => {
+    const subject = classResource(className, classDef, schema);
+    lines.push(`${subject} a owl:Class .`);
+    if (classDef.is_a && schema.classes[classDef.is_a]) {
+      lines.push(`${subject} rdfs:subClassOf ${classResource(classDef.is_a, schema.classes[classDef.is_a], schema)} .`);
+    }
+  });
+
+  Object.entries(schema.slots).forEach(([slotName, slotDef]) => {
+    const subject = slotResource(slotName, slotDef, schema);
+    lines.push(`${subject} a rdf:Property .`);
+
+    Object.entries(schema.classes).forEach(([className, classDef]) => {
+      if (inheritedSlots(className, schema).includes(slotName)) {
+        lines.push(`${subject} rdfs:domain ${classResource(className, classDef, schema)} .`);
+      }
+    });
+
+    lines.push(`${subject} rdfs:range ${rangeResource(slotDef.range ?? 'string', schema)} .`);
+  });
+
+  return `${lines.join('\n')}\n`;
+}
+
+export function schemaToShaclTurtle(schemaInput: SchemaModel): string {
+  const schema = normalizeSchema(schemaInput);
+  const lines = prefixLines(schema, ['rdf', 'rdfs', 'sh', 'xsd']);
+
+  Object.entries(schema.classes).forEach(([className, classDef]) => {
+    const target = classResource(className, classDef, schema);
+    const shape = resourceWithSuffix(target, 'Shape');
+    lines.push(`${shape} a sh:NodeShape ;`);
+    lines.push(`  sh:targetClass ${target} .`);
+
+    inheritedSlots(className, schema).forEach((slotName) => {
+      const slotDef = schema.slots[slotName];
+      if (!slotDef) return;
+
+      const constraints = [`    sh:path ${slotResource(slotName, slotDef, schema)}`];
+      if (slotDef.required) constraints.push('    sh:minCount 1');
+      if (!slotDef.multivalued) constraints.push('    sh:maxCount 1');
+
+      const range = slotDef.range ?? 'string';
+      if (schema.classes[range]) {
+        constraints.push(`    sh:class ${classResource(range, schema.classes[range], schema)}`);
+      } else if (schema.enums[range]) {
+        constraints.push(`    sh:in (${enumValues(schema.enums[range]).map(turtleLiteral).join(' ')})`);
+      } else {
+        constraints.push(`    sh:datatype ${datatypeResource(range) ?? 'xsd:string'}`);
+      }
+
+      lines.push(`${shape} sh:property [`);
+      lines.push(constraints.map((constraint, index) => (index === constraints.length - 1 ? constraint : `${constraint} ;`)).join('\n'));
+      lines.push('  ] .');
+    });
+  });
+
+  return `${lines.join('\n')}\n`;
+}
+
+function prefixLines(schema: SchemaModel, requiredPrefixes: string[]) {
+  const prefixes: Record<string, string> = {
+    rdf: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
+    owl: 'http://www.w3.org/2002/07/owl#',
+    sh: 'http://www.w3.org/ns/shacl#',
+    xsd: 'http://www.w3.org/2001/XMLSchema#',
+    ...(schema.prefixes ?? {}),
+  };
+
+  requiredPrefixes.forEach((prefix) => {
+    if (!prefixes[prefix]) {
+      prefixes[prefix] = emptySchema().prefixes?.[prefix] ?? '';
+    }
+  });
+
+  return Object.entries(prefixes)
+    .filter(([, uri]) => uri)
+    .map(([prefix, uri]) => `@prefix ${prefix}: <${uri}> .`)
+    .concat('');
+}
+
+function classResource(className: string, classDef: SchemaClass, schema: SchemaModel) {
+  return resourceFor(classDef.class_uri, className, schema);
+}
+
+function slotResource(slotName: string, slotDef: Slot, schema: SchemaModel) {
+  return resourceFor(slotDef.slot_uri, slotName, schema);
+}
+
+function resourceFor(uri: string | undefined, fallbackName: string, schema: SchemaModel) {
+  if (uri) return formatResource(uri);
+  const defaultPrefix = schema.default_prefix && schema.prefixes?.[schema.default_prefix] ? schema.default_prefix : 'ex';
+  return `${defaultPrefix}:${fallbackName}`;
+}
+
+function rangeResource(range: string, schema: SchemaModel) {
+  if (schema.classes[range]) return classResource(range, schema.classes[range], schema);
+  return datatypeResource(range) ?? 'rdfs:Literal';
+}
+
+function datatypeResource(range: string) {
+  return {
+    string: 'xsd:string',
+    integer: 'xsd:integer',
+    float: 'xsd:float',
+    boolean: 'xsd:boolean',
+    anyURI: 'xsd:anyURI',
+  }[range];
+}
+
+function formatResource(value: string) {
+  if (value.startsWith('http://') || value.startsWith('https://')) return `<${value}>`;
+  return value;
+}
+
+function resourceWithSuffix(value: string, suffix: string) {
+  if (value.startsWith('<') && value.endsWith('>')) {
+    return `${value.slice(0, -1)}${suffix}>`;
+  }
+  return `${value}${suffix}`;
+}
+
+function inheritedSlots(className: string, schema: SchemaModel, seen = new Set<string>()): string[] {
+  if (seen.has(className)) return [];
+  seen.add(className);
+
+  const classDef = schema.classes[className];
+  if (!classDef) return [];
+
+  const parentSlots = classDef.is_a && schema.classes[classDef.is_a] ? inheritedSlots(classDef.is_a, schema, seen) : [];
+  return [...parentSlots, ...(classDef.slots ?? [])];
+}
+
+function turtleLiteral(value: string) {
+  return JSON.stringify(value);
+}
+
 export function schemaToFlow(schema: SchemaModel, positions: Record<string, { x: number; y: number }>) {
   const classNames = Object.keys(schema.classes);
   const nodes: Node[] = classNames.map((className, index) => ({

@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Download, Eye, EyeOff, FileDown, Plus, Save, Tags, Upload } from 'lucide-react';
+import { downloadText } from '../lib/schemaApi';
 import { useEditorStore } from '../store';
 
 export type ExportKind = 'rdf' | 'shacl';
@@ -20,13 +21,7 @@ export function Toolbar({ onExport, onImport, onSave, onToggleYaml, status, yaml
   const fileInput = useRef<HTMLInputElement>(null);
 
   function downloadYaml() {
-    const blob = new Blob([yaml], { type: 'application/yaml' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'ontology.yaml';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadText(yaml, 'ontology.yaml', 'application/yaml');
   }
 
   return (
@@ -58,7 +53,7 @@ export function Toolbar({ onExport, onImport, onSave, onToggleYaml, status, yaml
         </button>
         <input
           ref={fileInput}
-          accept=".ttl,.rdf,.owl,.xml,.jsonld,.json,.nt,.n3,.trig,.shacl"
+          accept=".yaml,.yml,.ttl,.rdf,.owl,.xml,.jsonld,.json,.nt,.n3,.trig,.shacl"
           hidden
           type="file"
           onChange={(event) => {

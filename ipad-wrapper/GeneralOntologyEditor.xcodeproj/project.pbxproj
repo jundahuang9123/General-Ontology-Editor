@@ -70,6 +70,7 @@
 			buildPhases = (
 				7A1F4B2A2B6C4D8E90100051 /* Sources */,
 				7A1F4B2A2B6C4D8E90100021 /* Frameworks */,
+				7A1F4B2A2B6C4D8E90100053 /* Bundle Web App */,
 				7A1F4B2A2B6C4D8E90100052 /* Resources */,
 			);
 			buildRules = (
@@ -124,6 +125,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		7A1F4B2A2B6C4D8E90100053 /* Bundle Web App */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle Web App";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nFRONTEND_DIR=\"$SRCROOT/../frontend\"\nWEBAPP_DIR=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/WebApp\"\ncd \"$FRONTEND_DIR\"\nnpm run build\nrm -rf \"$WEBAPP_DIR\"\nmkdir -p \"$WEBAPP_DIR\"\ncp -R dist/. \"$WEBAPP_DIR/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7A1F4B2A2B6C4D8E90100051 /* Sources */ = {

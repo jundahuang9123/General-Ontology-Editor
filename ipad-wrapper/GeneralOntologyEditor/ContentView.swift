@@ -3,12 +3,13 @@ import SwiftUI
 private let defaultEditorURL = "http://localhost:8010/"
 
 struct ContentView: View {
-    @AppStorage("editorURL") private var editorURLText = defaultEditorURL
+    @AppStorage("editorURL") private var editorURLText = ""
     @State private var reloadToken = UUID()
     @State private var showingSettings = false
 
-    private var editorURL: URL {
-        normalizedURL(from: editorURLText) ?? URL(string: defaultEditorURL)!
+    private var editorURL: URL? {
+        let trimmed = editorURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : normalizedURL(from: trimmed)
     }
 
     var body: some View {
@@ -57,14 +58,14 @@ struct ServerSettingsView: View {
         NavigationStack {
             Form {
                 Section("Editor Server") {
-                    TextField("http://192.168.1.25:8010/", text: $draftURL)
+                    TextField("Bundled local editor", text: $draftURL)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
 
                 Section {
-                    Text("Use this PC's LAN address when running on a physical iPad. Use localhost only for the iPad simulator when the server is running on the same Mac.")
+                    Text("Leave blank to use the bundled editor. Enter a backend server URL only when you need RDF, OWL, and SHACL import support.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -94,7 +95,7 @@ struct ServerSettingsView: View {
 private func normalizedURLString(from text: String) -> String {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
-        return defaultEditorURL
+        return ""
     }
 
     let withScheme = trimmed.contains("://") ? trimmed : "http://\(trimmed)"
@@ -102,5 +103,6 @@ private func normalizedURLString(from text: String) -> String {
 }
 
 private func normalizedURL(from text: String) -> URL? {
-    URL(string: normalizedURLString(from: text))
+    let normalized = normalizedURLString(from: text)
+    return normalized.isEmpty ? nil : URL(string: normalized)
 }

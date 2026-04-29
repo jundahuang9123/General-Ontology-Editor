@@ -2,11 +2,19 @@
 
 This folder contains a native Android WebView wrapper for the General Ontology Editor.
 
-The wrapper is intentionally thin: it loads the hosted editor in a WebView, provides a native reload button, includes a server URL dialog, and supports file picking for RDF, OWL, SHACL, and related uploads.
+The wrapper bundles the built React editor into the APK and opens it in a WebView by default. It also keeps a server URL dialog for cases where you want to connect to the FastAPI backend for RDF, OWL, and SHACL import support.
 
-## Important Networking Note
+## Bundled Mode
 
-Android emulator networking is different from browser networking:
+When you build the Android project, Gradle runs the frontend build and copies `frontend/dist` into the APK assets. In bundled mode the editor can open, edit, save to device storage, download YAML, and export RDF/SHACL Turtle without a PC server.
+
+RDF, OWL, and SHACL upload parsing still requires the backend server. LinkML YAML/JSON upload works inside the bundled app.
+
+Automatic frontend builds require Node.js/npm on your PATH. If npm is not available, Gradle can still package an existing `frontend/dist` bundle.
+
+## Optional Server Mode
+
+Android emulator networking is different from browser networking. If you choose to use the backend server, this URL points from the emulator to the host machine:
 
 ```text
 http://10.0.2.2:8010/
@@ -22,14 +30,9 @@ http://192.168.1.25:8010/
 
 1. Open `android-wrapper/` in Android Studio.
 2. Let Android Studio sync Gradle.
-3. Start the editor server somewhere reachable:
-
-   ```bash
-   docker compose up --build -d
-   ```
-
-4. Run the `app` configuration on an Android emulator, tablet, or phone.
-5. Tap `Server` in the app toolbar and set the reachable editor URL.
+3. Run the `app` configuration on an Android emulator, tablet, or phone.
+4. Leave the server setting blank for bundled mode.
+5. Optional: start the Docker backend and tap `Server` to enter its reachable URL when you need backend import support.
 
 ## Release Notes
 

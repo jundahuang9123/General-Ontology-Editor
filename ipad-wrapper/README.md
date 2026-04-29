@@ -2,9 +2,17 @@
 
 This folder contains a native SwiftUI iPadOS wrapper for the General Ontology Editor web app.
 
-The wrapper is intentionally thin: it opens the editor in a `WKWebView`, gives the user a reload button, and includes a server settings sheet for changing the editor URL.
+The wrapper bundles the built React editor into the app and opens it in a `WKWebView` by default. It gives the user a reload button and keeps a server settings sheet for optional backend import support.
 
-## Important Networking Note
+## Bundled Mode
+
+The Xcode project includes a build phase that runs the frontend build and copies `frontend/dist` into the app as `WebApp`. In bundled mode the editor can open, edit, save to device storage, download YAML, and export RDF/SHACL Turtle without a PC server.
+
+RDF, OWL, and SHACL upload parsing still requires the backend server. LinkML YAML/JSON upload works inside the bundled app.
+
+The Xcode build phase requires Node.js/npm on the Mac build machine.
+
+## Optional Server Mode
 
 `localhost` on a physical iPad means the iPad itself. To connect to the editor running on this PC, start the Docker app and enter this PC's LAN address in the iPad app, for example:
 
@@ -17,22 +25,17 @@ Use `http://localhost:8010/` only in the iPad simulator when the server is runni
 ## Build On A Mac
 
 1. Copy this repository to a Mac with Xcode installed.
-2. Start the web app somewhere reachable from the iPad:
-
-   ```bash
-   docker compose up --build -d
-   ```
-
-3. Open:
+2. Open:
 
    ```text
    ipad-wrapper/GeneralOntologyEditor.xcodeproj
    ```
 
-4. Select the `GeneralOntologyEditor` target.
-5. In `Signing & Capabilities`, choose your Apple developer team.
-6. Build and run on an iPad or iPad simulator.
-7. Tap the server button in the app toolbar and enter the reachable editor URL.
+3. Select the `GeneralOntologyEditor` target.
+4. In `Signing & Capabilities`, choose your Apple developer team.
+5. Build and run on an iPad or iPad simulator.
+6. Leave the server setting blank for bundled mode.
+7. Optional: start the Docker backend and tap the server button to enter its reachable URL when you need backend import support.
 
 ## App Store Notes
 
