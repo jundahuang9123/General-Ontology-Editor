@@ -11,6 +11,7 @@ type EditorState = {
   loadSchema: (schema: SchemaModel) => void;
   mergeSchema: (schema: SchemaModel) => void;
   setSelected: (selected: SelectedItem) => void;
+  updateSchemaMetadata: (updates: Partial<Pick<SchemaModel, 'id' | 'name' | 'title' | 'default_prefix' | 'default_range' | 'prefixes' | 'imports'>>) => void;
   toggleClassMinimized: (name: string) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   connectClasses: (connection: Connection) => void;
@@ -42,6 +43,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   loadSchema: (schema) => set({ schema: normalizeSchema(schema), positions: {}, minimizedClasses: {}, selected: null }),
   mergeSchema: (schema) => set({ schema: mergeSchemas(get().schema, schema), selected: null }),
   setSelected: (selected) => set({ selected }),
+  updateSchemaMetadata: (updates) => {
+    const schema = structuredClone(get().schema);
+    set({
+      schema: {
+        ...schema,
+        ...updates,
+        prefixes: updates.prefixes ?? schema.prefixes,
+        imports: updates.imports ?? schema.imports,
+      },
+    });
+  },
   toggleClassMinimized: (name) =>
     set({ minimizedClasses: { ...get().minimizedClasses, [name]: !get().minimizedClasses[name] } }),
 

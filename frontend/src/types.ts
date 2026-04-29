@@ -35,6 +35,7 @@ export type SchemaEnum = {
 };
 
 export type SelectedItem =
+  | { kind: 'schema'; id: 'schema' }
   | { kind: 'class'; id: string }
   | { kind: 'slot'; id: string; classId?: string }
   | { kind: 'enum'; id: string }

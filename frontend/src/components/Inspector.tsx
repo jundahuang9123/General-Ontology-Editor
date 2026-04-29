@@ -8,6 +8,7 @@ export function Inspector() {
   const schema = useEditorStore((state) => state.schema);
   const selected = useEditorStore((state) => state.selected);
   const setSelected = useEditorStore((state) => state.setSelected);
+  const updateSchemaMetadata = useEditorStore((state) => state.updateSchemaMetadata);
   const updateClass = useEditorStore((state) => state.updateClass);
   const deleteClass = useEditorStore((state) => state.deleteClass);
   const addSlot = useEditorStore((state) => state.addSlot);
@@ -24,7 +25,18 @@ export function Inspector() {
     return (
       <aside className="inspector">
         <h2>Inspector</h2>
-        <p className="muted">Select a class, property, or enum to edit it.</p>
+        <p className="muted">Select schema metadata, a class, property, or enum to edit it.</p>
+        <div className="section-title">
+          <span>Schema</span>
+        </div>
+        <div className="list">
+          <button onClick={() => setSelected({ kind: 'schema', id: 'schema' })}>
+            {schema.title || schema.name || 'Ontology schema'}
+          </button>
+        </div>
+        <div className="section-title">
+          <span>Classes</span>
+        </div>
         <div className="list">
           {classNames.map((name) => (
             <button key={name} onClick={() => setSelected({ kind: 'class', id: name })}>
@@ -32,6 +44,92 @@ export function Inspector() {
             </button>
           ))}
         </div>
+        <div className="section-title">
+          <span>Enums</span>
+        </div>
+        <div className="list">
+          {enumNames.length === 0 ? (
+            <p className="muted">No enums yet.</p>
+          ) : (
+            enumNames.map((name) => (
+              <button key={name} onClick={() => setSelected({ kind: 'enum', id: name })}>
+                {name}
+              </button>
+            ))
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.kind === 'schema') {
+    return (
+      <aside className="inspector">
+        <h2>Schema</h2>
+        <label>
+          Title
+          <input
+            value={schema.title ?? ''}
+            onChange={(event) => updateSchemaMetadata({ title: event.target.value })}
+          />
+        </label>
+        <label>
+          Name
+          <input
+            value={schema.name ?? ''}
+            onChange={(event) => updateSchemaMetadata({ name: event.target.value })}
+          />
+        </label>
+        <label>
+          ID
+          <input
+            value={schema.id ?? ''}
+            onChange={(event) => updateSchemaMetadata({ id: event.target.value })}
+          />
+        </label>
+        <label>
+          Default prefix
+          <select
+            value={schema.default_prefix ?? ''}
+            onChange={(event) => updateSchemaMetadata({ default_prefix: event.target.value })}
+          >
+            <option value="">None</option>
+            {Object.keys(schema.prefixes ?? {}).map((prefix) => (
+              <option key={prefix} value={prefix}>
+                {prefix}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Default range
+          <select
+            value={schema.default_range ?? 'string'}
+            onChange={(event) => updateSchemaMetadata({ default_range: event.target.value })}
+          >
+            {ranges.map((range) => (
+              <option key={range} value={range}>
+                {range}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Prefixes
+          <textarea
+            className="small-textarea tall"
+            value={formatPrefixes(schema.prefixes)}
+            onChange={(event) => updateSchemaMetadata({ prefixes: parsePrefixes(event.target.value) })}
+          />
+        </label>
+        <label>
+          Imports
+          <textarea
+            className="small-textarea"
+            value={(schema.imports ?? []).join('\n')}
+            onChange={(event) => updateSchemaMetadata({ imports: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })}
+          />
+        </label>
       </aside>
     );
   }
@@ -215,5 +313,28 @@ export function Inspector() {
         Delete enum
       </button>
     </aside>
+  );
+}
+
+function formatPrefixes(prefixes: Record<string, string> | undefined) {
+  return Object.entries(prefixes ?? {})
+    .map(([prefix, uri]) => `${prefix}: ${uri}`)
+    .join('\n');
+}
+
+function parsePrefixes(text: string) {
+  return Object.fromEntries(
+    text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const separator = line.indexOf(':');
+        if (separator < 1) return null;
+        const prefix = line.slice(0, separator).trim();
+        const uri = line.slice(separator + 1).trim();
+        return prefix && uri ? [prefix, uri] : null;
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry)),
   );
 }
