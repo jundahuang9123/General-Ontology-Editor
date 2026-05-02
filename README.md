@@ -157,6 +157,8 @@ Open it with Android Studio, sync Gradle, and run the `app` configuration. In th
 
 The Android app can also run in bundled mode without a server. Import and export use Android's system file picker, so files can come from local or cloud-backed storage providers.
 
+Latest Android APK for teammate testing: `https://github.com/jundahuang9123/General-Ontology-Editor/releases/latest/download/app-debug.apk`
+
 ## Stop The App
 
 1. Stop the running containers.

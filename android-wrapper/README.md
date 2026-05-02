@@ -49,6 +49,18 @@ CLI build:
 
 For a small teammate beta, you can share an APK directly. Use the debug APK only for trusted internal testing; for broader testing, create a signed release APK or use Google Play internal testing so installs, updates, and device trust are easier to manage.
 
+GitHub APK link for testers:
+
+```text
+https://github.com/jundahuang9123/General-Ontology-Editor/releases/latest/download/app-debug.apk
+```
+
+That link expects the GitHub Release asset to be uploaded as `app-debug.apk`. If the asset is renamed, update the link above or share the release page instead:
+
+```text
+https://github.com/jundahuang9123/General-Ontology-Editor/releases
+```
+
 Typical outputs:
 
 ```text
