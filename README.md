@@ -155,6 +155,8 @@ android-wrapper/
 
 Open it with Android Studio, sync Gradle, and run the `app` configuration. In the Android emulator, use `http://10.0.2.2:8010/` to reach the editor server running on the host machine. On a physical Android device, use the LAN address of the machine hosting this Docker app.
 
+The Android app can also run in bundled mode without a server. Import and export use Android's system file picker, so files can come from local or cloud-backed storage providers.
+
 ## Stop The App
 
 1. Stop the running containers.

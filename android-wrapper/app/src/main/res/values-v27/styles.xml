@@ -4,6 +4,7 @@
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:fontFamily">sans</item>
         <item name="android:navigationBarColor">@color/toolbar_background</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">@color/toolbar_background</item>
     </style>

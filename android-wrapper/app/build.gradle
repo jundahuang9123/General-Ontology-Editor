@@ -8,14 +8,31 @@ def bundledEditorDir = file("src/main/assets/editor")
 
 android {
     namespace "com.jundahuang.generalontologyeditor"
-    compileSdk 35
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId "com.jundahuang.generalontologyeditor"
         minSdk 26
-        targetSdk 35
+        targetSdk 36
         versionCode 1
         versionName "1.0"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
+        release {
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
+        }
     }
 
     compileOptions {
@@ -34,18 +51,16 @@ tasks.register("buildFrontend") {
     doLast {
         def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
         def npmCheck = isWindows ? ["cmd", "/c", "where", "npm"] : ["sh", "-c", "command -v npm"]
-        def npmAvailable = exec {
+        def npmAvailable = providers.exec {
             commandLine npmCheck
             ignoreExitValue true
-            standardOutput = new ByteArrayOutputStream()
-            errorOutput = new ByteArrayOutputStream()
-        }.exitValue == 0
+        }.result.get().exitValue == 0
 
         if (npmAvailable) {
-            exec {
+            providers.exec {
                 workingDir frontendDir
                 commandLine isWindows ? ["cmd", "/c", "npm", "run", "build"] : ["npm", "run", "build"]
-            }
+            }.result.get().assertNormalExitValue()
             return
         }
 

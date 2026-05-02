@@ -26,6 +26,8 @@ points from the emulator to the host machine. On a physical Android device, use 
 http://192.168.1.25:8010/
 ```
 
+Debug builds allow cleartext HTTP for this local testing flow. Release builds are HTTPS-only by default, so use a trusted HTTPS URL if you need server mode in a distributed APK.
+
 ## Build With Android Studio
 
 1. Open `android-wrapper/` in Android Studio.
@@ -34,6 +36,36 @@ http://192.168.1.25:8010/
 4. Leave the server setting blank for bundled mode.
 5. Optional: start the Docker backend and tap `Server` to enter its reachable URL when you need backend import support.
 
+The project is pinned to Android Gradle Plugin 9.1.0, Gradle 9.3.1, compile SDK 36.1, and target SDK 36.
+
+CLI build:
+
+```bash
+./gradlew assembleDebug lintDebug
+./gradlew assembleRelease lintRelease
+```
+
+## APK Distribution
+
+For a small teammate beta, you can share an APK directly. Use the debug APK only for trusted internal testing; for broader testing, create a signed release APK or use Google Play internal testing so installs, updates, and device trust are easier to manage.
+
+Typical outputs:
+
+```text
+android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+android-wrapper/app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+The debug APK is debug-signed and installable for trusted testers. The release APK shown above is unsigned until you configure release signing in Android Studio, so it is a build artifact rather than an installable production package.
+
+Android users who install a directly shared APK may need to approve installation from that source. Keep the APK link private and replace old builds when you send updates.
+
+## Security Notes
+
+The bundled editor runs from app assets and does not require a backend server. Import and export use Android's system file picker, so the app does not request broad storage access.
+
+Release builds disable WebView debugging, app backup, WebView file URL access, and cleartext HTTP. The JavaScript export bridge is guarded so it only runs while the WebView is on the bundled editor or the configured editor origin.
+
 ## Release Notes
 
-The debug wrapper permits cleartext HTTP for local development. For production distribution, host the editor over HTTPS and tighten `network_security_config.xml`.
+For production distribution, use a signed release build and keep server mode on HTTPS.

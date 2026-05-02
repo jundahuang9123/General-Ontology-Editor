@@ -1,5 +1,6 @@
 package com.jundahuang.generalontologyeditor;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -7,10 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.WindowInsets;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -25,6 +29,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.window.OnBackInvokedDispatcher;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,6 +39,8 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final String PREFS_NAME = "general_ontology_editor";
     private static final String PREF_EDITOR_URL = "editor_url";
+    private static final String HTTP_SCHEME = "http";
+    private static final String HTTPS_SCHEME = "https";
     private static final String LOCAL_EDITOR_HOST = "general-ontology-editor.local";
     private static final String LOCAL_EDITOR_URL = "https://" + LOCAL_EDITOR_HOST + "/index.html";
     private static final int FILE_CHOOSER_REQUEST = 1001;
@@ -51,16 +58,18 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        WebView.setWebContentsDebuggingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
+        applySystemBarInsets(root);
 
         root.addView(createToolbar());
 
         webView = new WebView(this);
         configureWebView(webView);
+        configureBackNavigation();
         root.addView(
             webView,
             new LinearLayout.LayoutParams(
@@ -72,6 +81,33 @@ public class MainActivity extends Activity {
 
         setContentView(root);
         loadEditor();
+    }
+
+    private void applySystemBarInsets(LinearLayout root) {
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int topInset;
+            int bottomInset;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Insets systemBars = insets.getInsets(WindowInsets.Type.systemBars());
+                topInset = systemBars.top;
+                bottomInset = systemBars.bottom;
+            } else {
+                topInset = insets.getSystemWindowInsetTop();
+                bottomInset = insets.getSystemWindowInsetBottom();
+            }
+
+            view.setPadding(0, topInset, 0, bottomInset);
+            return insets;
+        });
+    }
+
+    private void configureBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                this::handleBackNavigation
+            );
+        }
     }
 
     private LinearLayout createToolbar() {
@@ -109,20 +145,33 @@ public class MainActivity extends Activity {
         return toolbar;
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private void configureWebView(WebView view) {
         WebSettings settings = view.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowContentAccess(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowFileAccessFromFileURLs(true);
-        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowFileAccessFromFileURLs(false);
+        settings.setAllowUniversalAccessFromFileURLs(false);
         settings.setLoadWithOverviewMode(false);
         settings.setUseWideViewPort(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setSafeBrowsingEnabled(true);
 
         view.addJavascriptInterface(new GeneralOntologyEditorBridge(), "GeneralOntologyEditor");
         view.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
+                return handleNavigation(request.getUrl());
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView webView, String url) {
+                return handleNavigation(Uri.parse(url));
+            }
+
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView webView, WebResourceRequest request) {
                 return localAssetResponse(request.getUrl());
@@ -159,7 +208,7 @@ public class MainActivity extends Activity {
     }
 
     private WebResourceResponse localAssetResponse(Uri uri) {
-        if (!LOCAL_EDITOR_HOST.equals(uri.getHost())) {
+        if (!HTTPS_SCHEME.equalsIgnoreCase(uri.getScheme()) || !LOCAL_EDITOR_HOST.equals(uri.getHost())) {
             return null;
         }
 
@@ -235,6 +284,82 @@ public class MainActivity extends Activity {
         return withScheme.endsWith("/") ? withScheme : withScheme + "/";
     }
 
+    private boolean handleNavigation(Uri uri) {
+        if (uri == null) {
+            return true;
+        }
+
+        if (isAllowedEditorUri(uri)) {
+            return false;
+        }
+
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (ActivityNotFoundException exception) {
+            Toast.makeText(this, R.string.external_link_unavailable, Toast.LENGTH_LONG).show();
+        }
+        return true;
+    }
+
+    private boolean isAllowedEditorUri(Uri uri) {
+        if (uri == null) {
+            return false;
+        }
+
+        String scheme = uri.getScheme();
+        if (!HTTP_SCHEME.equalsIgnoreCase(scheme) && !HTTPS_SCHEME.equalsIgnoreCase(scheme)) {
+            return false;
+        }
+
+        if (HTTPS_SCHEME.equalsIgnoreCase(scheme) && LOCAL_EDITOR_HOST.equals(uri.getHost())) {
+            return true;
+        }
+
+        Uri configuredUri = configuredEditorUri();
+        return configuredUri != null && sameOrigin(uri, configuredUri);
+    }
+
+    private Uri configuredEditorUri() {
+        String configuredUrl = getConfiguredEditorUrl();
+        return configuredUrl.isEmpty() ? null : Uri.parse(configuredUrl);
+    }
+
+    private boolean sameOrigin(Uri first, Uri second) {
+        String firstHost = first.getHost();
+        String secondHost = second.getHost();
+        return firstHost != null
+            && secondHost != null
+            && firstHost.equalsIgnoreCase(secondHost)
+            && normalizedScheme(first).equals(normalizedScheme(second))
+            && normalizedPort(first) == normalizedPort(second);
+    }
+
+    private String normalizedScheme(Uri uri) {
+        String scheme = uri.getScheme();
+        return scheme == null ? "" : scheme.toLowerCase(Locale.ROOT);
+    }
+
+    private int normalizedPort(Uri uri) {
+        int explicitPort = uri.getPort();
+        if (explicitPort != -1) {
+            return explicitPort;
+        }
+
+        String scheme = uri.getScheme();
+        if (HTTPS_SCHEME.equalsIgnoreCase(scheme)) {
+            return 443;
+        }
+        if (HTTP_SCHEME.equalsIgnoreCase(scheme)) {
+            return 80;
+        }
+        return -1;
+    }
+
+    private boolean isTrustedEditorContext() {
+        String currentUrl = webView == null ? null : webView.getUrl();
+        return currentUrl != null && isAllowedEditorUri(Uri.parse(currentUrl));
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -252,14 +377,19 @@ public class MainActivity extends Activity {
         filePathCallback = null;
     }
 
+    @SuppressLint("GestureBackNavigation")
     @Override
     public void onBackPressed() {
+        handleBackNavigation();
+    }
+
+    private void handleBackNavigation() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
 
-        super.onBackPressed();
+        finish();
     }
 
     private int dp(int value) {
@@ -330,7 +460,13 @@ public class MainActivity extends Activity {
     private final class GeneralOntologyEditorBridge {
         @JavascriptInterface
         public void exportText(String fileName, String mimeType, String text) {
-            runOnUiThread(() -> startExport(fileName, mimeType, text));
+            runOnUiThread(() -> {
+                if (!isTrustedEditorContext()) {
+                    Toast.makeText(MainActivity.this, R.string.export_blocked, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                startExport(fileName, mimeType, text);
+            });
         }
     }
 }
