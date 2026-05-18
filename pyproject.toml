@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "general-ontology-editor"
+version = "0.1.0"
+description = "Reusable visual editor core for LinkML/RDF/SHACL semantic schemas and lightweight ontology/profile editing."
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0",
+  "jsonschema>=4.20.0",
+  "linkml>=1.9.0",
+  "pydantic>=2.0.0",
+  "python-multipart>=0.0.9",
+  "pyyaml>=6.0.0",
+  "rdflib>=7.0.0",
+  "uvicorn>=0.30.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
