@@ -152,7 +152,7 @@ def generate_rdf(schema_or_path: dict[str, Any] | str | Path) -> str:
             graph.bind(prefix, Namespace(uri))
 
     schema_id = schema.get('id')
-    if isinstance(schema_id, str) and schema_id.startswith(('http://', 'https://')):
+    if annotation_bool(schema, 'emit_profile_metadata') is not False and isinstance(schema_id, str) and schema_id.startswith(('http://', 'https://')):
         profile_uri = URIRef(schema_id)
         graph.add((profile_uri, RDF.type, PROF.Profile))
         if schema.get('title'):
@@ -161,6 +161,8 @@ def generate_rdf(schema_or_path: dict[str, Any] | str | Path) -> str:
             graph.add((profile_uri, DCTERMS.description, Literal(schema['description'])))
 
     for name, definition in classes.items():
+        if annotation_bool(definition, 'emit_rdf') is False:
+            continue
         uri = class_uri(name, definition, schema)
         graph.add((uri, RDF.type, OWL.Class))
         parent = definition.get('is_a')
@@ -170,15 +172,26 @@ def generate_rdf(schema_or_path: dict[str, Any] | str | Path) -> str:
     for slot_name, slot_def in slots.items():
         uri = slot_uri(slot_name, slot_def, schema)
         slot_range = slot_def.get('range', 'string')
-        property_type = OWL.ObjectProperty if slot_range in classes else OWL.DatatypeProperty
-        graph.add((uri, RDF.type, RDF.Property))
-        graph.add((uri, RDF.type, property_type))
+        explicit_type = explicit_property_type(slot_def, schema)
+        property_type = explicit_type or (OWL.ObjectProperty if slot_range in classes else OWL.DatatypeProperty)
+        if explicit_type is not None:
+            graph.add((uri, RDF.type, property_type))
+        else:
+            graph.add((uri, RDF.type, RDF.Property))
+            graph.add((uri, RDF.type, property_type))
 
-        for class_name, class_def in classes.items():
-            if slot_name in inherited_slots(class_name, schema):
-                graph.add((uri, RDFS.domain, class_uri(class_name, class_def, schema)))
+        explicit_domain = annotation_uri(slot_def, 'rdf_domain', schema)
+        if explicit_domain is not None:
+            graph.add((uri, RDFS.domain, explicit_domain))
+        else:
+            for class_name, class_def in classes.items():
+                if slot_name in inherited_slots(class_name, schema):
+                    graph.add((uri, RDFS.domain, class_uri(class_name, class_def, schema)))
 
-        if slot_range in classes:
+        explicit_range = annotation_uri(slot_def, 'rdf_range', schema)
+        if explicit_range is not None:
+            graph.add((uri, RDFS.range, explicit_range))
+        elif slot_range in classes:
             graph.add((uri, RDFS.range, class_uri(slot_range, classes[slot_range], schema)))
         else:
             datatype = datatype_for_range(slot_range)
@@ -248,6 +261,36 @@ def annotation_value(definition: dict[str, Any], key: str) -> Any:
     if isinstance(value, dict):
         return value.get('value')
     return value
+
+
+def annotation_bool(definition: dict[str, Any], key: str) -> bool | None:
+    value = annotation_value(definition, key)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {'true', 'yes', '1'}:
+            return True
+        if normalized in {'false', 'no', '0'}:
+            return False
+    return None
+
+
+def annotation_uri(definition: dict[str, Any], key: str, schema: dict[str, Any]) -> URIRef | None:
+    value = annotation_value(definition, key)
+    return expand_curie(value, schema.get('prefixes', {})) if isinstance(value, str) else None
+
+
+def explicit_property_type(slot_def: dict[str, Any], schema: dict[str, Any]) -> URIRef | None:
+    value = annotation_value(slot_def, 'rdf_property_type')
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if normalized.lower() == 'object':
+        return URIRef('http://www.w3.org/2002/07/owl#ObjectProperty')
+    if normalized.lower() == 'datatype':
+        return URIRef('http://www.w3.org/2002/07/owl#DatatypeProperty')
+    return expand_curie(normalized, schema.get('prefixes', {}))
 
 
 def annotation_int(definition: dict[str, Any], key: str) -> int | None:
