@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "general-ontology-editor"
 version = "0.1.0"
 description = "Reusable visual editor core for LinkML/RDF/SHACL semantic schemas and lightweight ontology/profile editing."
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115.0",
@@ -18,6 +19,19 @@ dependencies = [
   "rdflib>=7.0.0",
   "uvicorn>=0.30.0",
 ]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Framework :: FastAPI",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/jundahuang9123/General-Ontology-Editor"
+Repository = "https://github.com/jundahuang9123/General-Ontology-Editor"
 
 [tool.setuptools.packages.find]
 where = ["src"]

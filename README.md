@@ -135,6 +135,34 @@ Use this only if you want to work on the React UI outside the Docker production 
 
 Vite proxies API requests to the FastAPI backend on port 8010.
 
+## Python Package Core
+
+The reusable backend core is exposed as the `general-ontology-editor` Python package. It is intended for downstream applications that need GOE import/export/schema APIs without using the GOE frontend.
+
+Install from a pinned GitHub commit or tag:
+
+```text
+general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/<commit-or-tag>.zip
+```
+
+The package exposes:
+
+```python
+from general_ontology_editor import (
+    create_app,
+    generate_json_schema,
+    generate_linkml,
+    generate_rdf,
+    generate_shacl,
+    import_rdf_schema,
+    load_schema,
+    save_schema,
+    validate_schema,
+)
+```
+
+The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
+
 ## iPadOS Wrapper
 
 An optional SwiftUI wrapper app is available in:
