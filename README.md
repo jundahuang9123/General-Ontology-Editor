@@ -137,12 +137,12 @@ Vite proxies API requests to the FastAPI backend on port 8010.
 
 ## Python Package Core
 
-The reusable backend core is exposed as the `general-ontology-editor` Python package. It is intended for downstream applications that need GOE import/export/schema APIs without using the GOE frontend.
+The reusable backend core is exposed as the `general-ontology-editor` Python package. Downstream tools can use GOE import/export/schema APIs without using the GOE frontend.
 
-Install from a pinned GitHub commit or tag:
+Install from the pinned GitHub tag:
 
 ```text
-general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/<commit-or-tag>.zip
+general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip
 ```
 
 The package exposes:
@@ -161,7 +161,7 @@ from general_ontology_editor import (
 )
 ```
 
-The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
+This is not a PyPI release. It is a pip-installable package from a GitHub tag. The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
 
 ## iPadOS Wrapper
 
