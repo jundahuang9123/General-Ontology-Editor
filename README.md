@@ -44,37 +44,13 @@ The app uses a React Flow diagram as the editing surface and keeps the schema mo
 
 ## Python Package Core
 
-The reusable backend core is exposed as the `general-ontology-editor` Python package. Downstream tools can use GOE import/export/schema APIs without using the GOE frontend.
-
-Install it directly with pip:
+Downstream tools can use the reusable GOE backend package without starting the GOE frontend:
 
 ```bash
 python -m pip install "general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip"
 ```
 
-In a `requirements.txt` file, use:
-
-```text
-general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip
-```
-
-The package exposes:
-
-```python
-from general_ontology_editor import (
-    create_app,
-    generate_json_schema,
-    generate_linkml,
-    generate_rdf,
-    generate_shacl,
-    import_rdf_schema,
-    load_schema,
-    save_schema,
-    validate_schema,
-)
-```
-
-This is not a PyPI release, so `pip install general-ontology-editor` alone will not work. The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
+The Docker app remains the recommended way to run the full visual editor.
 
 ## Edit An Ontology
 
@@ -135,6 +111,34 @@ After saving ontology changes, regenerate derived artifacts:
 7. RDF/SHACL import API: `http://localhost:8010/api/schema/import`
 8. SHACL export: `http://localhost:8010/schema/export/shacl`
 9. RDF export: `http://localhost:8010/schema/export/rdf`
+
+## Developer Package Notes
+
+In a `requirements.txt` file, use:
+
+```text
+general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip
+```
+
+This is a GitHub-tagged package, not a PyPI release, so `pip install general-ontology-editor` alone will not work.
+
+The package exposes common schema APIs:
+
+```python
+from general_ontology_editor import (
+    create_app,
+    generate_json_schema,
+    generate_linkml,
+    generate_rdf,
+    generate_shacl,
+    import_rdf_schema,
+    load_schema,
+    save_schema,
+    validate_schema,
+)
+```
+
+The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
 
 ## Developer Frontend Workflow
 
