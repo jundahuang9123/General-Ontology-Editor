@@ -46,7 +46,13 @@ The app uses a React Flow diagram as the editing surface and keeps the schema mo
 
 The reusable backend core is exposed as the `general-ontology-editor` Python package. Downstream tools can use GOE import/export/schema APIs without using the GOE frontend.
 
-Install from the pinned GitHub tag:
+Install it directly with pip:
+
+```bash
+python -m pip install "general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip"
+```
+
+In a `requirements.txt` file, use:
 
 ```text
 general-ontology-editor @ https://github.com/jundahuang9123/General-Ontology-Editor/archive/refs/tags/v0.1.0.zip
@@ -68,7 +74,7 @@ from general_ontology_editor import (
 )
 ```
 
-This is not a PyPI release. It is a pip-installable package from a GitHub tag. The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
+This is not a PyPI release, so `pip install general-ontology-editor` alone will not work. The React frontend, Docker app, Android wrapper, and iPad wrapper are not part of the Python package.
 
 ## Edit An Ontology
 
