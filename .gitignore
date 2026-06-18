@@ -18,3 +18,4 @@ android-wrapper/local.properties
 *.xcuserstate
 *.xcuserdata/
 xcuserdata/
+.DS_Store
